@@ -1,0 +1,25 @@
+# Java / Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# Angular / Node
+node_modules/
+dist/
+.angular/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.eclipse/
+.settings/
+.project
+.classpath
+
+# Ambiente
+.env
+*.log
+
+# Sistema operacional
+.DS_Store
+Thumbs.db

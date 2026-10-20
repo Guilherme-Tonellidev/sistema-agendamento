@@ -1,0 +1,7 @@
+# Desenvolvimento local, com o PostgreSQL do docker-compose.yml da raiz.
+# Estas credenciais existem só na sua máquina; produção usa variáveis de ambiente.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/agendamento
+    username: agendamento
+    password: agendamento

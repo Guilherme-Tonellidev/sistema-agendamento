@@ -1,0 +1,6 @@
+# Produção. DB_URL, DB_USERNAME e DB_PASSWORD vêm do ambiente do provedor de deploy.
+logging:
+  structured:
+    format:
+      # Logs em JSON, prontos para ferramentas de busca e monitoramento.
+      console: ecs

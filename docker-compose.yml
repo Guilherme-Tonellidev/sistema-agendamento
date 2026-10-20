@@ -1,0 +1,24 @@
+# Infraestrutura de desenvolvimento. Cada serviço entra quando a etapa do roadmap precisar dele
+# (RabbitMQ na etapa 7, Redis na 9, Mailpit junto com o e-mail).
+name: agendamento
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agendamento}
+      POSTGRES_USER: ${POSTGRES_USER:-agendamento}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agendamento}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # A partir do PostgreSQL 18, o volume é montado em /var/lib/postgresql.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
