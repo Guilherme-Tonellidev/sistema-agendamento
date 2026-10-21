@@ -89,9 +89,13 @@ public class AgendamentoService {
         this.clock = clock;
     }
 
+    /**
+     * A trava no profissional serializa reservas, bloqueios e mudanças de jornada da mesma agenda: a checagem
+     * de disponibilidade e a gravação acontecem sem ninguém mudar a agenda no meio.
+     */
     @Transactional
     public AgendamentoResponse reservar(AgendamentoRequest request) {
-        Profissional profissional = profissionalService.obterComServicos(request.profissionalId());
+        Profissional profissional = profissionalService.obterComTrava(request.profissionalId());
         Servico servico = servicoService.obter(request.servicoId());
         Cliente cliente = clienteService.obter(request.clienteId());
         Periodo horario = disponibilidadeService.garantirHorarioNaAgenda(profissional, servico, request.inicio());
@@ -132,6 +136,7 @@ public class AgendamentoService {
     @Transactional
     public AgendamentoResponse reagendar(UUID id, ReagendamentoRequest request) {
         Agendamento agendamento = obter(id);
+        profissionalService.obterComTrava(profissionalId(agendamento));
         Instant agora = Instant.now(clock);
         agendamento.garantirQuePodeReagendar(agora);
 

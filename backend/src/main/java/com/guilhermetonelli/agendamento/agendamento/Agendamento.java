@@ -74,7 +74,7 @@ public class Agendamento extends EntidadeBase {
         garantirQueAindaNaoComecou(agora, "cancelar");
         if (agora.plus(antecedenciaMinima).isAfter(inicio)) {
             throw new RegraDeNegocioException(
-                    "O cancelamento precisa ser feito com pelo menos " + descrever(antecedenciaMinima) + " de antecedência.");
+                    "O cancelamento precisa ser feito com pelo menos " + Textos.duracao(antecedenciaMinima) + " de antecedência.");
         }
         this.status = StatusAgendamento.CANCELADO;
         this.canceladoEm = agora.truncatedTo(ChronoUnit.MICROS);
@@ -127,10 +127,6 @@ public class Agendamento extends EntidadeBase {
             throw new RegraDeNegocioException(
                     "Não é possível " + acao + " um agendamento com status " + status + ".");
         }
-    }
-
-    private static String descrever(Duration duracao) {
-        return duracao.toMinutesPart() == 0 ? duracao.toHours() + "h" : duracao.toMinutes() + " min";
     }
 
     public Profissional getProfissional() {

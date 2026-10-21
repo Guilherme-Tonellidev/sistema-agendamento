@@ -93,7 +93,11 @@ As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate
    precisar, bloqueie folgas e férias.
 2. Consulte os horários livres de um dia para um serviço: o sistema desconta bloqueios, reservas
    ativas e horários que já passaram.
-3. Reserve um desses horários. Um segundo pedido para o mesmo horário recebe `409`.
+3. Reserve um desses horários (com pelo menos 1h30 de antecedência). Um segundo pedido para o
+   mesmo horário recebe `409`.
+4. Bloquear um período que já tem reservas também recebe `409`, com a lista dos agendamentos
+   afetados: o profissional cancela ou remarca antes, e nenhum cliente perde o horário sem aviso.
+5. Inativar um profissional ou serviço impede novas reservas, mas mantém as que já existem.
 
 ### Configuração
 
@@ -102,6 +106,7 @@ As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate
 | `agendamento.fuso-horario` | `America/Sao_Paulo` | Fuso da jornada e das datas pedidas na API |
 | `agendamento.intervalo-entre-horarios` | `PT15M` | Os horários oferecidos começam em múltiplos deste intervalo |
 | `agendamento.janela-de-reserva` | `P90D` | Até quanto tempo à frente é possível reservar |
+| `agendamento.antecedencia-minima-reserva` | `PT1H30M` | Prazo mínimo entre a reserva e o início do horário |
 | `agendamento.antecedencia-minima-cancelamento` | `PT2H` | Prazo mínimo para o cliente cancelar |
 
 Todas podem vir de variáveis de ambiente (ex.: `AGENDAMENTO_FUSO_HORARIO`).
@@ -125,6 +130,9 @@ Os erros seguem o padrão Problem Details (RFC 9457):
 - **Conflito de horários garantido pelo banco.** Constraints de exclusão com `btree_gist` impedem
   que o profissional ou o cliente tenham duas reservas ativas sobrepostas, mesmo sob concorrência
   (há teste com requisições simultâneas). A aplicação valida antes só para dar uma mensagem clara.
+- **Uma trava por agenda.** Reservas, bloqueios e mudanças de jornada do mesmo profissional travam
+  a linha dele (`SELECT ... FOR UPDATE`) antes de conferir a agenda. Sem isso, uma reserva e um
+  bloqueio simultâneos poderiam passar cada um pela sua checagem (*write skew*); há teste para isso.
 - **Uma regra só para horários livres e reservas.** Um horário é reservável se e somente se aparece
   na lista de livres; o cálculo é uma classe pura, coberta por testes unitários.
 - **Preço congelado na reserva.** O agendamento guarda o preço do momento; reajustes do serviço

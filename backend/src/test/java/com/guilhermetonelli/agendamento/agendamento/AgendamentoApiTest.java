@@ -135,6 +135,51 @@ class AgendamentoApiTest extends IntegracaoTest {
     }
 
     @Test
+    void exigeAntecedenciaMinimaParaReservar() {
+        relogio.ajustar(Instant.parse("2026-10-21T09:45:00Z"));
+
+        assertThat(reservar(ana, carlos, AS_8H)).satisfies(regraDeNegocio("pelo menos 1h30 de antecedência"));
+        assertThat(reservar(ana, carlos, AS_8H15).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    void recusaBloqueioSobreReservaEListaOsAfetados() {
+        UUID agendamento = id(reservar(ana, carlos, AS_8H));
+
+        var recusado = bloquearComResposta(ana, "2026-10-21T10:00:00Z", AS_9H);
+        cancelar(agendamento, null);
+        var aceito = bloquearComResposta(ana, "2026-10-21T10:00:00Z", AS_9H);
+
+        assertThat(recusado).satisfies(conflito("O período tem 1 agendamento"));
+        assertThat(JsonPath.<List<String>>read(recusado.getBody(), "$.agendamentos[*].id"))
+                .containsExactly(agendamento.toString());
+        assertThat(aceito.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    void reservaEBloqueioSimultaneosNuncaConvivem() throws Exception {
+        List<ResponseEntity<String>> respostas = emParalelo(List.of(
+                () -> reservar(ana, carlos, AS_8H),
+                () -> bloquearComResposta(ana, AS_8H, AS_9H)));
+
+        assertThat(respostas).filteredOn(r -> r.getStatusCode().is2xxSuccessful()).hasSize(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM agendamento", Integer.class)
+                + jdbc.queryForObject("SELECT count(*) FROM bloqueio", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void inativarProfissionalMantemOsAgendamentosJaMarcados() {
+        UUID agendamento = id(reservar(ana, carlos, AS_8H));
+
+        var inativacao = api.patch().uri("/api/profissionais/{id}/inativar", ana).retrieve().toBodilessEntity();
+
+        assertThat(inativacao.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(buscar(agendamento).status()).isEqualTo(StatusAgendamento.CONFIRMADO);
+        assertThat(reservar(ana, diana, AS_9H)).satisfies(regraDeNegocio("inativo"));
+        assertThat(cancelar(agendamento, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void recusaProfissionalInativoServicoInativoOuNaoAtendido() {
         UUID barba = cadastrarServico("Barba");
 
@@ -481,11 +526,15 @@ class AgendamentoApiTest extends IntegracaoTest {
     }
 
     private void bloquear(UUID profissional, String inicio, String fim) {
-        api.post().uri("/api/profissionais/{id}/bloqueios", profissional)
+        assertThat(bloquearComResposta(profissional, inicio, fim).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    private ResponseEntity<String> bloquearComResposta(UUID profissional, String inicio, String fim) {
+        return api.post().uri("/api/profissionais/{id}/bloqueios", profissional)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new BloqueioRequest(Instant.parse(inicio), Instant.parse(fim), null))
                 .retrieve()
-                .toBodilessEntity();
+                .toEntity(String.class);
     }
 
     private UUID cadastrarServico(String nome) {

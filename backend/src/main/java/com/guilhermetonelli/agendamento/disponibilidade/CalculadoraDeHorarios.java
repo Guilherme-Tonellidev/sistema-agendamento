@@ -21,11 +21,11 @@ final class CalculadoraDeHorarios {
 
     /**
      * Horários com a duração pedida que cabem inteiros num intervalo da jornada do dia, não cruzam
-     * nenhum período ocupado e começam depois de {@code agora}. Os inícios são múltiplos do passo
-     * contados a partir da meia-noite local.
+     * nenhum período ocupado e começam a partir de {@code inicioMinimo}. Os inícios são múltiplos do
+     * passo contados a partir da meia-noite local.
      */
     List<Periodo> horariosLivres(
-            LocalDate data, List<IntervaloDeJornada> jornada, Duration duracao, List<Periodo> ocupados, Instant agora) {
+            LocalDate data, List<IntervaloDeJornada> jornada, Duration duracao, List<Periodo> ocupados, Instant inicioMinimo) {
 
         Instant meiaNoite = data.atStartOfDay(fuso).toInstant();
         return jornada.stream()
@@ -33,7 +33,7 @@ final class CalculadoraDeHorarios {
                 .map(intervalo -> intervalo.naData(data, fuso))
                 .sorted(Comparator.comparing(Periodo::inicio))
                 .flatMap(turno -> candidatos(meiaNoite, turno, duracao))
-                .filter(horario -> horario.inicio().isAfter(agora))
+                .filter(horario -> !horario.inicio().isBefore(inicioMinimo))
                 .filter(horario -> ocupados.stream().noneMatch(horario::sobrepoe))
                 .toList();
     }

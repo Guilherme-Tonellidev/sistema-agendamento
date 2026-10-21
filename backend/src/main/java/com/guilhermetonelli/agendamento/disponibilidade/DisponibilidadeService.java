@@ -18,6 +18,7 @@ import com.guilhermetonelli.agendamento.profissional.ProfissionalService;
 import com.guilhermetonelli.agendamento.servico.Servico;
 import com.guilhermetonelli.agendamento.servico.ServicoService;
 import com.guilhermetonelli.agendamento.shared.config.AgendamentoProperties;
+import com.guilhermetonelli.agendamento.shared.domain.Textos;
 import com.guilhermetonelli.agendamento.shared.exception.RegraDeNegocioException;
 
 /** Reúne jornada, bloqueios e agendamentos do profissional e delega o cálculo à {@link CalculadoraDeHorarios}. */
@@ -72,9 +73,11 @@ public class DisponibilidadeService {
         Periodo dia = Periodo.doDia(data, properties.fusoHorario());
         List<Periodo> ocupados = Stream.concat(
                         bloqueioService.bloqueados(profissionalId, dia).stream(),
-                        agendamentosAtivos.doProfissional(profissionalId, dia).stream())
+                        agendamentosAtivos.doProfissional(profissionalId, dia).stream().map(AgendamentoAtivo::horario))
                 .toList();
-        return livres(profissional, servico, data, ocupados, agora).stream().map(mapper::paraResponse).toList();
+        return livres(profissional, servico, data, ocupados, inicioMinimo(agora)).stream()
+                .map(mapper::paraResponse)
+                .toList();
     }
 
     /**
@@ -84,8 +87,11 @@ public class DisponibilidadeService {
     public Periodo garantirHorarioNaAgenda(Profissional profissional, Servico servico, Instant inicio) {
         garantirQuePodeAtender(profissional, servico);
         Instant agora = Instant.now(clock);
-        if (!inicio.isAfter(agora)) {
-            throw new RegraDeNegocioException("O horário escolhido já passou.");
+        if (inicio.isBefore(inicioMinimo(agora))) {
+            throw new RegraDeNegocioException(inicio.isAfter(agora)
+                    ? "Reservas precisam de pelo menos %s de antecedência."
+                            .formatted(Textos.duracao(properties.antecedenciaMinimaReserva()))
+                    : "O horário escolhido já passou.");
         }
         LocalDate data = LocalDate.ofInstant(inicio, properties.fusoHorario());
         garantirDentroDaJanela(data, hoje(agora));
@@ -96,7 +102,7 @@ public class DisponibilidadeService {
 
         Periodo horario = new Periodo(inicio, inicio.plus(duracao(servico)));
         List<Periodo> bloqueados = bloqueioService.bloqueados(profissional.getId(), Periodo.doDia(data, properties.fusoHorario()));
-        if (!livres(profissional, servico, data, bloqueados, agora).contains(horario)) {
+        if (!livres(profissional, servico, data, bloqueados, inicio).contains(horario)) {
             throw new RegraDeNegocioException(
                     "O horário está fora da jornada de " + profissional.getNome() + " ou num período bloqueado.");
         }
@@ -104,9 +110,13 @@ public class DisponibilidadeService {
     }
 
     private List<Periodo> livres(
-            Profissional profissional, Servico servico, LocalDate data, List<Periodo> ocupados, Instant agora) {
+            Profissional profissional, Servico servico, LocalDate data, List<Periodo> ocupados, Instant inicioMinimo) {
         return calculadora.horariosLivres(
-                data, jornadaService.doProfissional(profissional.getId()), duracao(servico), ocupados, agora);
+                data, jornadaService.doProfissional(profissional.getId()), duracao(servico), ocupados, inicioMinimo);
+    }
+
+    private Instant inicioMinimo(Instant agora) {
+        return agora.plus(properties.antecedenciaMinimaReserva());
     }
 
     private static Duration duracao(Servico servico) {

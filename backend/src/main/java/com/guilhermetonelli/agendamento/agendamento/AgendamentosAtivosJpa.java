@@ -3,8 +3,10 @@ package com.guilhermetonelli.agendamento.agendamento;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
+import com.guilhermetonelli.agendamento.disponibilidade.AgendamentoAtivo;
 import com.guilhermetonelli.agendamento.disponibilidade.AgendamentosAtivos;
 import com.guilhermetonelli.agendamento.disponibilidade.Periodo;
 
@@ -18,10 +20,10 @@ class AgendamentosAtivosJpa implements AgendamentosAtivos {
     }
 
     @Override
-    public List<Periodo> doProfissional(UUID profissionalId, Periodo periodo) {
-        return repository.findAll(AgendamentoSpecifications.ativosDoProfissional(profissionalId, periodo))
+    public List<AgendamentoAtivo> doProfissional(UUID profissionalId, Periodo periodo) {
+        return repository.findAll(AgendamentoSpecifications.ativosDoProfissional(profissionalId, periodo), Sort.by("inicio"))
                 .stream()
-                .map(Agendamento::horario)
+                .map(agendamento -> new AgendamentoAtivo(agendamento.getId(), agendamento.horario()))
                 .toList();
     }
 }

@@ -60,12 +60,13 @@ class CalculadoraDeHorariosTest {
     }
 
     @Test
-    void ofereceSoHorariosQueComecamNoFuturo() {
-        Instant agora = Instant.parse("2026-10-21T11:15:00Z");
+    void ofereceSoHorariosAPartirDoInicioMinimo() {
+        Instant inicioMinimo = Instant.parse("2026-10-21T11:15:00Z");
 
-        var livres = calculadora.horariosLivres(QUARTA, List.of(intervalo(WEDNESDAY, "08:00", "09:00")), MEIA_HORA, List.of(), agora);
+        var livres = calculadora.horariosLivres(
+                QUARTA, List.of(intervalo(WEDNESDAY, "08:00", "09:00")), MEIA_HORA, List.of(), inicioMinimo);
 
-        assertThat(inicios(livres)).containsExactly("11:30");
+        assertThat(inicios(livres)).containsExactly("11:15", "11:30");
     }
 
     @Test
