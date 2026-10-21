@@ -1,5 +1,6 @@
 package com.guilhermetonelli.agendamento.shared.domain;
 
+import java.time.Duration;
 import java.util.Locale;
 
 /** Normalizações de texto usadas pelas entidades antes de salvar. */
@@ -18,5 +19,15 @@ public final class Textos {
             return null;
         }
         return texto.strip();
+    }
+
+    /** Duração legível para mensagens: "2h", "1h30", "45 min". */
+    public static String duracao(Duration duracao) {
+        long horas = duracao.toHours();
+        int minutos = duracao.toMinutesPart();
+        if (horas == 0) {
+            return minutos + " min";
+        }
+        return minutos == 0 ? horas + "h" : "%dh%02d".formatted(horas, minutos);
     }
 }

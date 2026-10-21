@@ -266,10 +266,11 @@ class DisponibilidadeApiTest extends IntegracaoTest {
     }
 
     @Test
-    void horariosLivresDescontamBloqueiosEOPassado() {
+    void horariosLivresDescontamBloqueiosEAAntecedenciaMinima() {
         var cenario = cenarioComJornada("08:00", "10:00");
         bloquear(cenario.profissional(), "2026-10-21T12:00:00Z", "2026-10-21T13:00:00Z", "Médico");
-        relogio.ajustar(Instant.parse("2026-10-21T11:10:00Z"));
+        // 06:40 em São Paulo: com 1h30 de antecedência, o primeiro horário possível é 08:10.
+        relogio.ajustar(Instant.parse("2026-10-21T09:40:00Z"));
 
         assertThat(horariosLivres(cenario, QUARTA)).extracting(HorarioLivreResponse::inicio).containsExactly(
                 Instant.parse("2026-10-21T11:15:00Z"),

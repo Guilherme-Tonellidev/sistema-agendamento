@@ -41,7 +41,9 @@ class TratadorDeErros extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ConflitoException.class)
     ProblemDetail conflito(ConflitoException ex) {
-        return problema(HttpStatus.CONFLICT, "Conflito", ex.getMessage());
+        ProblemDetail problema = problema(HttpStatus.CONFLICT, "Conflito", ex.getMessage());
+        ex.getDetalhes().forEach(problema::setProperty);
+        return problema;
     }
 
     @ExceptionHandler(RegraDeNegocioException.class)
