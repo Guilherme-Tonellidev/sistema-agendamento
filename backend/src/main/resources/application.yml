@@ -28,10 +28,26 @@ spring:
   flyway:
     locations: classpath:db/migration
 
+  data:
+    web:
+      pageable:
+        # Impede que um cliente peça uma página gigante e derrube o banco.
+        max-page-size: 100
+
+  web:
+    # Mensagens de validação sempre em português, independentemente do idioma do navegador.
+    locale: pt_BR
+    locale-resolver: fixed
+
 server:
   shutdown: graceful
   error:
     include-stacktrace: never
+
+springdoc:
+  swagger-ui:
+    tags-sorter: alpha
+    operations-sorter: method
 
 management:
   endpoints:

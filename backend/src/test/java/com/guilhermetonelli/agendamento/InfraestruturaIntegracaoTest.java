@@ -2,40 +2,17 @@ package com.guilhermetonelli.agendamento;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.HttpStatus;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(TestcontainersConfiguration.class)
-class InfraestruturaIntegracaoTest {
-
-    @Value("${local.server.port}")
-    private int porta;
-
-    @Autowired
-    private JdbcTemplate jdbc;
+class InfraestruturaIntegracaoTest extends IntegracaoTest {
 
     @Test
-    void healthDeveResponderUp() throws Exception {
-        var requisicao = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + "/actuator/health"))
-                .GET()
-                .build();
+    void healthDeveResponderUp() {
+        var resposta = api.get().uri("/actuator/health").retrieve().toEntity(String.class);
 
-        try (var cliente = HttpClient.newHttpClient()) {
-            var resposta = cliente.send(requisicao, HttpResponse.BodyHandlers.ofString());
-
-            assertThat(resposta.statusCode()).isEqualTo(200);
-            assertThat(resposta.body()).contains("\"status\":\"UP\"");
-        }
+        assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(resposta.getBody()).contains("\"status\":\"UP\"");
     }
 
     @Test
@@ -44,5 +21,13 @@ class InfraestruturaIntegracaoTest {
                 "SELECT count(*) FROM pg_extension WHERE extname = 'btree_gist'", Integer.class);
 
         assertThat(extensoes).isEqualTo(1);
+    }
+
+    @Test
+    void documentacaoOpenApiDeveEstarDisponivel() {
+        var resposta = api.get().uri("/v3/api-docs").retrieve().toEntity(String.class);
+
+        assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(resposta.getBody()).contains("/api/profissionais", "/api/servicos", "/api/clientes");
     }
 }
