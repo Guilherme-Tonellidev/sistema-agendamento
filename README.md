@@ -53,6 +53,27 @@ cd backend
 
 > No Windows, use `mvnw.cmd` no lugar de `./mvnw` se não estiver no Git Bash.
 
+## Deploy
+
+A cada push na `main` com o CI verde, o workflow `release.yml` publica a imagem
+`ghcr.io/guilherme-tonellidev/sistema-agendamento-api` (tags `latest` e o SHA do commit).
+
+**Em qualquer servidor com Docker:**
+
+```bash
+cp .env.example .env   # troque POSTGRES_PASSWORD
+docker compose -f docker-compose.prod.yml up -d --wait
+```
+
+Sobe a API e o PostgreSQL com healthcheck; as migrações rodam sozinhas na inicialização.
+Use `docker compose -f docker-compose.prod.yml pull` para atualizar para a imagem mais nova.
+
+**Em uma plataforma gerenciada** (Render, Railway, Fly.io...): rode a imagem acima (ou o
+`backend/Dockerfile`) com `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` apontando para um PostgreSQL 18.
+O health check fica em `/actuator/health/readiness`.
+
+> A API ainda não tem autenticação (etapa 4). Não a exponha publicamente com dados reais antes disso.
+
 ## API
 
 | Recurso | Endpoints |
@@ -60,8 +81,30 @@ cd backend
 | Serviços | `POST /api/servicos` · `GET /api/servicos` · `GET/PUT /api/servicos/{id}` · `PATCH /api/servicos/{id}/ativar` e `/inativar` |
 | Profissionais | `POST /api/profissionais` · `GET /api/profissionais` · `GET/PUT /api/profissionais/{id}` · `PUT /api/profissionais/{id}/servicos` · `PATCH .../ativar` e `/inativar` |
 | Clientes | `POST /api/clientes` · `GET /api/clientes` · `GET/PUT /api/clientes/{id}` |
+| Disponibilidade | `GET/PUT /api/profissionais/{id}/jornada` · `POST/GET /api/profissionais/{id}/bloqueios` · `DELETE .../bloqueios/{bloqueioId}` · `GET /api/profissionais/{id}/horarios-livres?servicoId=&data=` |
+| Agendamentos | `POST /api/agendamentos` · `GET /api/agendamentos` · `GET /api/agendamentos/{id}` · `PATCH .../{id}/cancelar`, `/reagendar`, `/concluir` e `/nao-compareceu` |
 
-As listagens aceitam filtros (`nome`, `ativo`, `servicoId`...) e paginação (`page`, `size`, `sort`).
+As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
+(`page`, `size`, `sort`).
+
+### Fluxo de uma reserva
+
+1. Defina a jornada semanal do profissional (horário local, vários intervalos por dia) e, se
+   precisar, bloqueie folgas e férias.
+2. Consulte os horários livres de um dia para um serviço: o sistema desconta bloqueios, reservas
+   ativas e horários que já passaram.
+3. Reserve um desses horários. Um segundo pedido para o mesmo horário recebe `409`.
+
+### Configuração
+
+| Propriedade | Padrão | Para que serve |
+| --- | --- | --- |
+| `agendamento.fuso-horario` | `America/Sao_Paulo` | Fuso da jornada e das datas pedidas na API |
+| `agendamento.intervalo-entre-horarios` | `PT15M` | Os horários oferecidos começam em múltiplos deste intervalo |
+| `agendamento.janela-de-reserva` | `P90D` | Até quanto tempo à frente é possível reservar |
+| `agendamento.antecedencia-minima-cancelamento` | `PT2H` | Prazo mínimo para o cliente cancelar |
+
+Todas podem vir de variáveis de ambiente (ex.: `AGENDAMENTO_FUSO_HORARIO`).
 Os erros seguem o padrão Problem Details (RFC 9457):
 
 ```json
@@ -79,8 +122,13 @@ Os erros seguem o padrão Problem Details (RFC 9457):
   altera tabelas são as migrações em `db/migration`.
 - **Datas em UTC.** O banco e a aplicação trabalham em UTC, e a hora atual vem de um `Clock`
   injetado, o que permite testar regras de horário com datas fixas.
-- **Conflito de horários garantido pelo banco** *(etapa 3)*. Uma constraint de exclusão com
-  `btree_gist` impede reservas sobrepostas mesmo sob concorrência.
+- **Conflito de horários garantido pelo banco.** Constraints de exclusão com `btree_gist` impedem
+  que o profissional ou o cliente tenham duas reservas ativas sobrepostas, mesmo sob concorrência
+  (há teste com requisições simultâneas). A aplicação valida antes só para dar uma mensagem clara.
+- **Uma regra só para horários livres e reservas.** Um horário é reservável se e somente se aparece
+  na lista de livres; o cálculo é uma classe pura, coberta por testes unitários.
+- **Preço congelado na reserva.** O agendamento guarda o preço do momento; reajustes do serviço
+  não mudam o que já foi combinado.
 - **Erros padronizados.** Toda falha sai em Problem Details, com o status certo para cada caso:
   404 (não encontrado), 409 (duplicado ou edição concorrente), 422 (regra de negócio).
 - **Concorrência otimista.** Cada registro tem uma versão; se duas pessoas editam ao mesmo tempo,
@@ -101,7 +149,7 @@ Os erros seguem o padrão Problem Details (RFC 9457):
 - [x] **0. Esqueleto:** Spring Boot, Flyway, Testcontainers, Docker e CI
 - [x] **1. Cadastros:** profissionais, serviços e clientes
 - [x] **2. Disponibilidade:** horários de trabalho, folgas e horários livres
-- [ ] **3. Reserva:** criação, cancelamento, reagendamento e conflito de horários
+- [x] **3. Reserva:** criação, cancelamento, reagendamento e conflito de horários
 - [ ] **4. Segurança:** JWT com papéis e login com Google
 - [ ] **5. Angular:** base, login e rotas protegidas
 - [ ] **6. Fluxo de reserva no front-end** com FullCalendar
