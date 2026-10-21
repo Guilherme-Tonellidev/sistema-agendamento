@@ -95,6 +95,22 @@ class CalculadoraDeHorariosTest {
                 Instant.parse("2026-03-08T07:00:00Z"));
     }
 
+    @Test
+    void reconheceInicioAlinhadoAoIntervaloNoFusoDoNegocio() {
+        assertThat(calculadora.alinhado(Instant.parse("2026-10-21T11:15:00Z"))).isTrue();
+        assertThat(calculadora.alinhado(Instant.parse("2026-10-21T11:05:00Z"))).isFalse();
+        assertThat(calculadora.alinhado(Instant.parse("2026-10-21T11:15:00.000001Z"))).isFalse();
+    }
+
+    @Test
+    void alinhamentoContaAPartirDaMeiaNoiteLocal() {
+        var deHoraEmHora = new CalculadoraDeHorarios(ZoneId.of("Asia/Kolkata"), Duration.ofHours(1));
+
+        // Meia-noite em Calcutá é 18:30 UTC do dia anterior.
+        assertThat(deHoraEmHora.alinhado(Instant.parse("2026-10-21T03:30:00Z"))).isTrue();
+        assertThat(deHoraEmHora.alinhado(Instant.parse("2026-10-21T03:00:00Z"))).isFalse();
+    }
+
     private static IntervaloDeJornada intervalo(DayOfWeek dia, String inicio, String fim) {
         return new IntervaloDeJornada(UUID.randomUUID(), dia, LocalTime.parse(inicio), LocalTime.parse(fim));
     }

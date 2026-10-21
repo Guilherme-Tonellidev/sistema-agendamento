@@ -38,6 +38,13 @@ final class CalculadoraDeHorarios {
                 .toList();
     }
 
+    /** Se o instante cai num múltiplo exato do passo, contado a partir da meia-noite local do seu dia. */
+    boolean alinhado(Instant inicio) {
+        Instant meiaNoite = LocalDate.ofInstant(inicio, fuso).atStartOfDay(fuso).toInstant();
+        Duration decorrido = Duration.between(meiaNoite, inicio);
+        return decorrido.getNano() == 0 && decorrido.toSeconds() % passoEmSegundos == 0;
+    }
+
     private Stream<Periodo> candidatos(Instant meiaNoite, Periodo turno, Duration duracao) {
         return Stream.iterate(
                         alinhar(meiaNoite, turno.inicio()),

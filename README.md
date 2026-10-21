@@ -100,7 +100,7 @@ Os erros seguem o padrão Problem Details (RFC 9457):
 
 - [x] **0. Esqueleto:** Spring Boot, Flyway, Testcontainers, Docker e CI
 - [x] **1. Cadastros:** profissionais, serviços e clientes
-- [ ] **2. Disponibilidade:** horários de trabalho, folgas e horários livres
+- [x] **2. Disponibilidade:** horários de trabalho, folgas e horários livres
 - [ ] **3. Reserva:** criação, cancelamento, reagendamento e conflito de horários
 - [ ] **4. Segurança:** JWT com papéis e login com Google
 - [ ] **5. Angular:** base, login e rotas protegidas

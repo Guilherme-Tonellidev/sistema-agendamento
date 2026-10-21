@@ -13,12 +13,14 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param fusoHorario fuso em que a jornada e as datas pedidas pela API são interpretadas
  * @param intervaloEntreHorarios os horários oferecidos começam em múltiplos deste intervalo
  * @param janelaDeReserva até quanto tempo à frente é possível consultar e reservar
+ * @param antecedenciaMinimaCancelamento até quanto tempo antes do início o cliente pode cancelar
  */
 @ConfigurationProperties("agendamento")
 public record AgendamentoProperties(
         @DefaultValue("America/Sao_Paulo") ZoneId fusoHorario,
         @DefaultValue("PT15M") Duration intervaloEntreHorarios,
-        @DefaultValue("P90D") Period janelaDeReserva) {
+        @DefaultValue("P90D") Period janelaDeReserva,
+        @DefaultValue("PT2H") Duration antecedenciaMinimaCancelamento) {
 
     public AgendamentoProperties {
         if (intervaloEntreHorarios.toSeconds() < 60) {

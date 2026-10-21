@@ -8,7 +8,7 @@ import com.guilhermetonelli.agendamento.servico.ServicoMapper;
 import com.guilhermetonelli.agendamento.shared.config.MapStructConfig;
 
 @Mapper(config = MapStructConfig.class, uses = ServicoMapper.class)
-interface ProfissionalMapper {
+public interface ProfissionalMapper {
 
     ProfissionalResponse paraResponse(Profissional profissional);
 

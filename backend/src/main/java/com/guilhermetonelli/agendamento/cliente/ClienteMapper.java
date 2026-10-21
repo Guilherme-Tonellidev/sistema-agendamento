@@ -6,7 +6,7 @@ import com.guilhermetonelli.agendamento.cliente.dto.ClienteResponse;
 import com.guilhermetonelli.agendamento.shared.config.MapStructConfig;
 
 @Mapper(config = MapStructConfig.class)
-interface ClienteMapper {
+public interface ClienteMapper {
 
     ClienteResponse paraResponse(Cliente cliente);
 }

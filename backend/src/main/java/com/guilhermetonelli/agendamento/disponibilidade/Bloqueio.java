@@ -1,5 +1,8 @@
 package com.guilhermetonelli.agendamento.disponibilidade;
 
+import static com.guilhermetonelli.agendamento.shared.domain.FaixaDeDatas.ANO_MAXIMO;
+import static com.guilhermetonelli.agendamento.shared.domain.FaixaDeDatas.ANO_MINIMO;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -18,10 +21,6 @@ import com.guilhermetonelli.agendamento.shared.exception.RegraDeNegocioException
 @Entity
 @Table(name = "bloqueio")
 public class Bloqueio extends EntidadeBase {
-
-    /** Faixa de anos aceita nas datas de bloqueio; fora dela o PostgreSQL recusaria o valor. */
-    static final int ANO_MINIMO = 1900;
-    static final int ANO_MAXIMO = 9999;
 
     private static final Instant LIMITE_INFERIOR = LocalDate.of(ANO_MINIMO, 1, 1).atStartOfDay(ZoneOffset.UTC).toInstant();
     private static final Instant LIMITE_SUPERIOR = LocalDate.of(ANO_MAXIMO + 1, 1, 1).atStartOfDay(ZoneOffset.UTC).toInstant();

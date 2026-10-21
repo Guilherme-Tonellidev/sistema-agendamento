@@ -28,6 +28,6 @@ class InfraestruturaIntegracaoTest extends IntegracaoTest {
         var resposta = api.get().uri("/v3/api-docs").retrieve().toEntity(String.class);
 
         assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(resposta.getBody()).contains("/api/profissionais", "/api/servicos", "/api/clientes", "/horarios-livres");
+        assertThat(resposta.getBody()).contains("/api/profissionais", "/api/servicos", "/api/clientes", "/horarios-livres", "/api/agendamentos");
     }
 }

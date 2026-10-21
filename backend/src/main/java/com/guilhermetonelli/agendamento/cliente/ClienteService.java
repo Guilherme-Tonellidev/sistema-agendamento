@@ -55,7 +55,7 @@ public class ClienteService {
         return mapper.paraResponse(cliente);
     }
 
-    private Cliente obter(UUID id) {
+    public Cliente obter(UUID id) {
         return repository.findById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Cliente", id));
     }
 
