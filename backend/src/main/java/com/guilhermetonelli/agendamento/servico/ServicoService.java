@@ -91,7 +91,7 @@ public class ServicoService {
         return encontrados;
     }
 
-    private Servico obter(UUID id) {
+    public Servico obter(UUID id) {
         return repository.findById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Serviço", id));
     }
 

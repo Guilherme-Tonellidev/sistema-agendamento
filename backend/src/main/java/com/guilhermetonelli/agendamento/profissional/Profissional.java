@@ -61,6 +61,10 @@ public class Profissional extends EntidadeBase {
         servicos.addAll(novos);
     }
 
+    public boolean atende(Servico servico) {
+        return servicos.contains(servico);
+    }
+
     public void ativar() {
         this.ativo = true;
     }

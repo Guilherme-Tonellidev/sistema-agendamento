@@ -13,14 +13,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
 
 /**
- * Base dos testes de integração: aplicação completa numa porta aleatória, PostgreSQL real
- * e banco limpo antes de cada teste.
+ * Base dos testes de integração: aplicação completa numa porta aleatória, PostgreSQL real,
+ * relógio controlado e banco limpo antes de cada teste.
  *
  * <p>Todas as classes que estendem esta compartilham o mesmo contexto do Spring e o mesmo
  * container, então o PostgreSQL sobe uma vez só por execução.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, RelogioDeTeste.class})
 public abstract class IntegracaoTest {
 
     @Value("${local.server.port}")
@@ -29,12 +29,16 @@ public abstract class IntegracaoTest {
     @Autowired
     protected JdbcTemplate jdbc;
 
+    @Autowired
+    protected RelogioDeTeste relogio;
+
     /** Cliente HTTP da API. Respostas de erro não lançam exceção, para o teste conferir o status. */
     protected RestClient api;
 
     @BeforeEach
     protected void prepararAmbiente() {
         limparBanco();
+        relogio.reiniciar();
         api = RestClient.builder()
                 .requestFactory(new JdkClientHttpRequestFactory())
                 .baseUrl("http://localhost:" + porta)

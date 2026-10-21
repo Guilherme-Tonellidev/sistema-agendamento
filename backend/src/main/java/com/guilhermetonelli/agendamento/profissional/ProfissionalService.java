@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.guilhermetonelli.agendamento.profissional.dto.ProfissionalFiltro;
@@ -77,12 +78,24 @@ public class ProfissionalService {
         obter(id).inativar();
     }
 
-    private Profissional obter(UUID id) {
-        return repository.findById(id).orElseThrow(() -> naoEncontrado(id));
+    public Profissional obterComServicos(UUID id) {
+        return repository.findComServicosById(id).orElseThrow(() -> naoEncontrado(id));
     }
 
-    private Profissional obterComServicos(UUID id) {
-        return repository.findComServicosById(id).orElseThrow(() -> naoEncontrado(id));
+    /** Trava o profissional até o fim da transação, para alterações concorrentes na agenda dele não se misturarem. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Profissional obterComTrava(UUID id) {
+        return repository.findParaAtualizarById(id).orElseThrow(() -> naoEncontrado(id));
+    }
+
+    public void garantirQueExiste(UUID id) {
+        if (!repository.existsById(id)) {
+            throw naoEncontrado(id);
+        }
+    }
+
+    private Profissional obter(UUID id) {
+        return repository.findById(id).orElseThrow(() -> naoEncontrado(id));
     }
 
     private static RecursoNaoEncontradoException naoEncontrado(UUID id) {
