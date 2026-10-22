@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -21,6 +23,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import com.guilhermetonelli.agendamento.shared.exception.ConflitoException;
+import com.guilhermetonelli.agendamento.shared.exception.NaoAutenticadoException;
 import com.guilhermetonelli.agendamento.shared.exception.RecursoNaoEncontradoException;
 import com.guilhermetonelli.agendamento.shared.exception.RegraDeNegocioException;
 
@@ -37,6 +40,22 @@ class TratadorDeErros extends ResponseEntityExceptionHandler {
     @ExceptionHandler(RecursoNaoEncontradoException.class)
     ProblemDetail naoEncontrado(RecursoNaoEncontradoException ex) {
         return problema(HttpStatus.NOT_FOUND, "Recurso não encontrado", ex.getMessage());
+    }
+
+    @ExceptionHandler(NaoAutenticadoException.class)
+    ResponseEntity<ProblemDetail> naoAutenticado(NaoAutenticadoException ex) {
+        return naoAutenticado(ex.getMessage());
+    }
+
+    /** Vem dos filtros de segurança: falta de token ou token inválido/expirado. */
+    @ExceptionHandler(AuthenticationException.class)
+    ResponseEntity<ProblemDetail> naoAutenticado(AuthenticationException ex) {
+        return naoAutenticado("Faça login para continuar.");
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    ProblemDetail acessoNegado(AccessDeniedException ex) {
+        return problema(HttpStatus.FORBIDDEN, "Acesso negado", ex.getMessage());
     }
 
     @ExceptionHandler(ConflitoException.class)
@@ -102,6 +121,12 @@ class TratadorDeErros extends ResponseEntityExceptionHandler {
         corpo.setDetail("Um ou mais campos estão inválidos.");
         corpo.setProperty("erros", erros);
         return handleExceptionInternal(ex, corpo, headers, status, request);
+    }
+
+    private static ResponseEntity<ProblemDetail> naoAutenticado(String detalhe) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
+                .body(problema(HttpStatus.UNAUTHORIZED, "Não autenticado", detalhe));
     }
 
     private static ProblemDetail problema(HttpStatus status, String titulo, String detalhe) {

@@ -51,6 +51,13 @@ server:
   error:
     include-stacktrace: never
 
+seguranca:
+  # Chave HMAC dos tokens, em Base64 (mínimo de 32 bytes). Gere com: openssl rand -base64 32
+  jwt-segredo: ${JWT_SEGREDO}
+  origens-permitidas: ${CORS_ORIGENS:http://localhost:4200}
+  admin-email: ${ADMIN_EMAIL:}
+  admin-senha: ${ADMIN_SENHA:}
+
 springdoc:
   swagger-ui:
     tags-sorter: alpha

@@ -335,8 +335,9 @@ class AgendamentoApiTest extends IntegracaoTest {
     }
 
     @Test
-    void cancelamentoExigeAntecedenciaMinima() {
+    void clienteCancelaComAntecedenciaMinima() {
         UUID agendamento = id(reservar(ana, carlos, AS_8H));
+        api = apiComo(comoCliente(carlos));
 
         relogio.ajustar(Instant.parse("2026-10-21T09:01:00Z"));
         var tarde = cancelar(agendamento, null);

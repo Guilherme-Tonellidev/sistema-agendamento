@@ -5,3 +5,11 @@ spring:
     url: jdbc:postgresql://localhost:5432/agendamento
     username: agendamento
     password: agendamento
+
+# Valores só para desenvolvimento. Em produção, JWT_SEGREDO, ADMIN_EMAIL e ADMIN_SENHA vêm do ambiente.
+seguranca:
+  jwt-segredo: ZGV2LXNvbWVudGUtbG9jYWwtbmFvLXVzZS1lbS1wcm9kdWNhbw==
+  admin-email: admin@agendamento.local
+  admin-senha: admin-local-123
+  # Em http://localhost o navegador aceita o cookie Secure, mas ferramentas como o Postman não.
+  cookie-seguro: false
