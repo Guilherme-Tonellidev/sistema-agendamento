@@ -14,7 +14,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param intervaloEntreHorarios os horários oferecidos começam em múltiplos deste intervalo
  * @param janelaDeReserva até quanto tempo à frente é possível consultar e reservar
  * @param antecedenciaMinimaReserva quanto tempo antes do início um horário ainda pode ser reservado
- * @param antecedenciaMinimaCancelamento até quanto tempo antes do início o cliente pode cancelar
+ * @param antecedenciaMinimaCancelamento até quanto tempo antes do início o cliente pode cancelar ou reagendar
  */
 @ConfigurationProperties("agendamento")
 public record AgendamentoProperties(
@@ -30,6 +30,9 @@ public record AgendamentoProperties(
         }
         if (antecedenciaMinimaReserva.isNegative()) {
             throw new IllegalArgumentException("agendamento.antecedencia-minima-reserva não pode ser negativa");
+        }
+        if (antecedenciaMinimaCancelamento.isNegative()) {
+            throw new IllegalArgumentException("agendamento.antecedencia-minima-cancelamento não pode ser negativa");
         }
     }
 }

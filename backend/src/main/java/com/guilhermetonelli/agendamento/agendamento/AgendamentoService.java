@@ -128,9 +128,7 @@ public class AgendamentoService {
     @Transactional
     public AgendamentoResponse cancelar(UUID id, String motivo, UsuarioLogado eu) {
         Agendamento agendamento = obter(id, eu);
-        // O prazo protege a agenda do profissional; ele mesmo e o administrador podem cancelar até o início.
-        Duration antecedencia = eu.cliente() ? properties.antecedenciaMinimaCancelamento() : Duration.ZERO;
-        agendamento.cancelar(motivo, Instant.now(clock), antecedencia);
+        agendamento.cancelar(motivo, Instant.now(clock), antecedenciaExigida(eu));
         repository.flush();
         eventos.publishEvent(new AgendamentoCancelado(
                 id,
@@ -147,7 +145,8 @@ public class AgendamentoService {
         Agendamento agendamento = obter(id, eu);
         profissionalService.obterComTrava(profissionalId(agendamento));
         Instant agora = Instant.now(clock);
-        agendamento.garantirQuePodeReagendar(agora);
+        Duration antecedencia = antecedenciaExigida(eu);
+        agendamento.garantirQuePodeReagendar(agora, antecedencia);
 
         Periodo horario = disponibilidadeService.garantirHorarioNaAgenda(
                 agendamento.getProfissional(), agendamento.getServico(), request.inicio());
@@ -155,7 +154,7 @@ public class AgendamentoService {
                 profissionalId(agendamento), clienteId(agendamento), horario, AgendamentoSpecifications.exceto(id));
 
         Instant inicioAnterior = agendamento.getInicio();
-        agendamento.reagendar(horario, agora);
+        agendamento.reagendar(horario, agora, antecedencia);
         salvar(agendamento);
         eventos.publishEvent(new AgendamentoReagendado(
                 id, profissionalId(agendamento), clienteId(agendamento), inicioAnterior, horario.inicio(), horario.fim()));
@@ -220,6 +219,11 @@ public class AgendamentoService {
         return repository.findDetalhadoById(id)
                 .filter(agendamento -> eu.participaDe(profissionalId(agendamento), clienteId(agendamento)))
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Agendamento", id));
+    }
+
+    /** O prazo protege a agenda do profissional; ele mesmo e o administrador podem mudar até o início. */
+    private Duration antecedenciaExigida(UsuarioLogado eu) {
+        return eu.cliente() ? properties.antecedenciaMinimaCancelamento() : Duration.ZERO;
     }
 
     private Agendamento obterParaEncerrar(UUID id, UsuarioLogado eu) {

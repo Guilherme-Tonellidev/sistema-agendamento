@@ -72,21 +72,20 @@ public class Agendamento extends EntidadeBase {
     /** Só antes do início; com {@code antecedenciaMinima} positiva, só até esse tempo antes do início. */
     public void cancelar(String motivo, Instant agora, Duration antecedenciaMinima) {
         garantirQueAindaNaoComecou(agora, "cancelar");
-        if (agora.plus(antecedenciaMinima).isAfter(inicio)) {
-            throw new RegraDeNegocioException(
-                    "O cancelamento precisa ser feito com pelo menos " + Textos.duracao(antecedenciaMinima) + " de antecedência.");
-        }
+        garantirAntecedencia(agora, antecedenciaMinima, "O cancelamento");
         this.status = StatusAgendamento.CANCELADO;
         this.canceladoEm = agora.truncatedTo(ChronoUnit.MICROS);
         this.motivoCancelamento = Textos.limparOpcional(motivo);
     }
 
-    public void garantirQuePodeReagendar(Instant agora) {
+    /** Mesmo prazo do cancelamento: reagendar também libera o horário combinado. */
+    public void garantirQuePodeReagendar(Instant agora, Duration antecedenciaMinima) {
         garantirQueAindaNaoComecou(agora, "reagendar");
+        garantirAntecedencia(agora, antecedenciaMinima, "O reagendamento");
     }
 
-    public void reagendar(Periodo horario, Instant agora) {
-        garantirQuePodeReagendar(agora);
+    public void reagendar(Periodo horario, Instant agora, Duration antecedenciaMinima) {
+        garantirQuePodeReagendar(agora, antecedenciaMinima);
         definirHorario(horario);
     }
 
@@ -113,6 +112,13 @@ public class Agendamento extends EntidadeBase {
             throw new RegraDeNegocioException("Só é possível " + acao + " um agendamento depois do início.");
         }
         this.status = novo;
+    }
+
+    private void garantirAntecedencia(Instant agora, Duration antecedenciaMinima, String acao) {
+        if (agora.plus(antecedenciaMinima).isAfter(inicio)) {
+            throw new RegraDeNegocioException(
+                    acao + " precisa ser feito com pelo menos " + Textos.duracao(antecedenciaMinima) + " de antecedência.");
+        }
     }
 
     private void garantirQueAindaNaoComecou(Instant agora, String acao) {
