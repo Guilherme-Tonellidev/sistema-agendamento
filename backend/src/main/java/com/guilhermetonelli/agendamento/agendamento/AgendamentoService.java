@@ -4,6 +4,7 @@ import static com.guilhermetonelli.agendamento.agendamento.AgendamentoSpecificat
 import static com.guilhermetonelli.agendamento.agendamento.AgendamentoSpecifications.ativosDoProfissional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ import com.guilhermetonelli.agendamento.disponibilidade.DisponibilidadeService;
 import com.guilhermetonelli.agendamento.disponibilidade.Periodo;
 import com.guilhermetonelli.agendamento.profissional.Profissional;
 import com.guilhermetonelli.agendamento.profissional.ProfissionalService;
+import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
 import com.guilhermetonelli.agendamento.servico.Servico;
 import com.guilhermetonelli.agendamento.servico.ServicoService;
 import com.guilhermetonelli.agendamento.shared.config.AgendamentoProperties;
@@ -94,7 +97,10 @@ public class AgendamentoService {
      * de disponibilidade e a gravação acontecem sem ninguém mudar a agenda no meio.
      */
     @Transactional
-    public AgendamentoResponse reservar(AgendamentoRequest request) {
+    public AgendamentoResponse reservar(AgendamentoRequest request, UsuarioLogado eu) {
+        if (!eu.participaDe(request.profissionalId(), request.clienteId())) {
+            throw new AccessDeniedException("Clientes reservam só para si; profissionais, só na própria agenda.");
+        }
         Profissional profissional = profissionalService.obterComTrava(request.profissionalId());
         Servico servico = servicoService.obter(request.servicoId());
         Cliente cliente = clienteService.obter(request.clienteId());
@@ -107,21 +113,24 @@ public class AgendamentoService {
         return mapper.paraResponse(agendamento);
     }
 
-    public Page<AgendamentoResponse> listar(AgendamentoFiltro filtro, Pageable pageable) {
+    public Page<AgendamentoResponse> listar(AgendamentoFiltro pedido, Pageable pageable, UsuarioLogado eu) {
+        AgendamentoFiltro filtro = pedido.visivelPara(eu);
         FaixaDeDatas faixa = FaixaDeDatas.entre(filtro.de(), filtro.ate(), properties.fusoHorario());
         // O id desempata agendamentos com o mesmo início, para nenhum item repetir ou sumir entre as páginas.
         var estavel = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort().and(Sort.by("id")));
         return repository.findAll(AgendamentoSpecifications.de(filtro, faixa), estavel).map(mapper::paraResponse);
     }
 
-    public AgendamentoResponse buscar(UUID id) {
-        return mapper.paraResponse(obter(id));
+    public AgendamentoResponse buscar(UUID id, UsuarioLogado eu) {
+        return mapper.paraResponse(obter(id, eu));
     }
 
     @Transactional
-    public AgendamentoResponse cancelar(UUID id, String motivo) {
-        Agendamento agendamento = obter(id);
-        agendamento.cancelar(motivo, Instant.now(clock), properties.antecedenciaMinimaCancelamento());
+    public AgendamentoResponse cancelar(UUID id, String motivo, UsuarioLogado eu) {
+        Agendamento agendamento = obter(id, eu);
+        // O prazo protege a agenda do profissional; ele mesmo e o administrador podem cancelar até o início.
+        Duration antecedencia = eu.cliente() ? properties.antecedenciaMinimaCancelamento() : Duration.ZERO;
+        agendamento.cancelar(motivo, Instant.now(clock), antecedencia);
         repository.flush();
         eventos.publishEvent(new AgendamentoCancelado(
                 id,
@@ -134,8 +143,8 @@ public class AgendamentoService {
 
     /** Mesmas regras de uma reserva nova, com o mesmo profissional e serviço; o horário antigo não conflita. */
     @Transactional
-    public AgendamentoResponse reagendar(UUID id, ReagendamentoRequest request) {
-        Agendamento agendamento = obter(id);
+    public AgendamentoResponse reagendar(UUID id, ReagendamentoRequest request, UsuarioLogado eu) {
+        Agendamento agendamento = obter(id, eu);
         profissionalService.obterComTrava(profissionalId(agendamento));
         Instant agora = Instant.now(clock);
         agendamento.garantirQuePodeReagendar(agora);
@@ -154,15 +163,15 @@ public class AgendamentoService {
     }
 
     @Transactional
-    public AgendamentoResponse concluir(UUID id) {
-        Agendamento agendamento = obter(id);
+    public AgendamentoResponse concluir(UUID id, UsuarioLogado eu) {
+        Agendamento agendamento = obterParaEncerrar(id, eu);
         agendamento.concluir(Instant.now(clock));
         return mapper.paraResponse(agendamento);
     }
 
     @Transactional
-    public AgendamentoResponse registrarFalta(UUID id) {
-        Agendamento agendamento = obter(id);
+    public AgendamentoResponse registrarFalta(UUID id, UsuarioLogado eu) {
+        Agendamento agendamento = obterParaEncerrar(id, eu);
         agendamento.registrarFalta(Instant.now(clock));
         return mapper.paraResponse(agendamento);
     }
@@ -206,8 +215,17 @@ public class AgendamentoService {
         return ex;
     }
 
-    private Agendamento obter(UUID id) {
-        return repository.findDetalhadoById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Agendamento", id));
+    /** Quem não participa do agendamento recebe 404, e não 403: não descobre nem que ele existe. */
+    private Agendamento obter(UUID id, UsuarioLogado eu) {
+        return repository.findDetalhadoById(id)
+                .filter(agendamento -> eu.participaDe(profissionalId(agendamento), clienteId(agendamento)))
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Agendamento", id));
+    }
+
+    private Agendamento obterParaEncerrar(UUID id, UsuarioLogado eu) {
+        Agendamento agendamento = obter(id, eu);
+        eu.garantirAgendaDe(profissionalId(agendamento));
+        return agendamento;
     }
 
     private static UUID profissionalId(Agendamento agendamento) {

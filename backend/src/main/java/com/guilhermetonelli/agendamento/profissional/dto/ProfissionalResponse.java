@@ -12,4 +12,10 @@ public record ProfissionalResponse(
         String email,
         String telefone,
         boolean ativo,
-        List<ServicoResumoResponse> servicos) {}
+        List<ServicoResumoResponse> servicos) {
+
+    /** Versão pública: o e-mail é o login do profissional e não deve ficar exposto na vitrine. */
+    public ProfissionalResponse semContato() {
+        return new ProfissionalResponse(id, nome, null, null, ativo, servicos);
+    }
+}

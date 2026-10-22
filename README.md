@@ -12,7 +12,7 @@ agendamentos sobrepostos para o mesmo profissional.
 
 | Camada | Tecnologias |
 | --- | --- |
-| Back-end | Java 21, Spring Boot 4, Spring Data JPA, Bean Validation, MapStruct, Flyway |
+| Back-end | Java 21, Spring Boot 4, Spring Security (JWT), Spring Data JPA, Bean Validation, MapStruct, Flyway |
 | Documentação | OpenAPI (springdoc) e Swagger UI |
 | Banco de dados | PostgreSQL 18 |
 | Front-end | Angular *(etapa 5)* |
@@ -42,7 +42,9 @@ cd backend
 ```
 
 Confira em <http://localhost:8080/actuator/health> e veja a documentação da API em
-<http://localhost:8080/swagger-ui.html>.
+<http://localhost:8080/swagger-ui.html>. Em desenvolvimento já existe um administrador
+`admin@agendamento.local` / `admin-local-123`: faça login em `/api/auth/login` e cole o token em
+**Authorize**.
 
 ### Testes
 
@@ -61,7 +63,7 @@ A cada push na `main` com o CI verde, o workflow `release.yml` publica a imagem
 **Em qualquer servidor com Docker:**
 
 ```bash
-cp .env.example .env   # troque POSTGRES_PASSWORD
+cp .env.example .env   # troque POSTGRES_PASSWORD e preencha JWT_SEGREDO, ADMIN_EMAIL e ADMIN_SENHA
 docker compose -f docker-compose.prod.yml up -d --wait
 ```
 
@@ -69,10 +71,31 @@ Sobe a API e o PostgreSQL com healthcheck; as migrações rodam sozinhas na inic
 Use `docker compose -f docker-compose.prod.yml pull` para atualizar para a imagem mais nova.
 
 **Em uma plataforma gerenciada** (Render, Railway, Fly.io...): rode a imagem acima (ou o
-`backend/Dockerfile`) com `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` apontando para um PostgreSQL 18.
-O health check fica em `/actuator/health/readiness`.
+`backend/Dockerfile`) com `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` apontando para um PostgreSQL 18,
+mais `JWT_SEGREDO` (obrigatório), `ADMIN_EMAIL`, `ADMIN_SENHA` e `CORS_ORIGENS`. O health check fica em
+`/actuator/health/readiness`. Sem `JWT_SEGREDO` a aplicação nem sobe, de propósito.
 
-> A API ainda não tem autenticação (etapa 4). Não a exponha publicamente com dados reais antes disso.
+## Segurança
+
+| Quem | Pode |
+| --- | --- |
+| Visitante | Ver serviços, profissionais (sem e-mail e telefone) e horários livres; criar conta |
+| Cliente | Reservar, ver, cancelar e reagendar os **próprios** agendamentos; editar o próprio cadastro |
+| Profissional | Cuidar da **própria** jornada, bloqueios e agendamentos; concluir atendimentos |
+| Administrador | Tudo, incluindo catálogo, profissionais e acesso deles |
+
+- **Login:** `POST /api/auth/login` devolve um **token de acesso** (JWT HS256, 15 min) no corpo e um
+  **refresh token** num cookie `HttpOnly`, `SameSite=Strict`, restrito a `/api/auth`. O front guarda o
+  token de acesso só em memória; `POST /api/auth/refresh` renova e `POST /api/auth/logout` encerra.
+- **Rotação com detecção de roubo:** cada renovação troca o refresh token. Se um token já trocado
+  aparecer de novo, alguém o copiou, e todas as sessões daquela família são revogadas.
+- **No banco, só hashes:** senhas com BCrypt; refresh tokens com SHA-256. Um vazamento do banco
+  não entrega senhas nem sessões válidas.
+- **Sem pistas para atacantes:** login inválido tem sempre a mesma mensagem e o mesmo tempo de
+  resposta, exista o e-mail ou não. Agendamento de outra pessoa responde `404`, não `403`.
+- **Negado por padrão:** toda rota exige login, exceto as públicas listadas na configuração. Regras
+  de dono (a agenda de quem, a reserva de quem) ficam nos services, com testes para cada papel.
+- **Profissionais** recebem acesso pelo administrador: `PUT /api/profissionais/{id}/acesso`.
 
 ## API
 
@@ -82,6 +105,7 @@ O health check fica em `/actuator/health/readiness`.
 | Profissionais | `POST /api/profissionais` · `GET /api/profissionais` · `GET/PUT /api/profissionais/{id}` · `PUT /api/profissionais/{id}/servicos` · `PATCH .../ativar` e `/inativar` |
 | Clientes | `POST /api/clientes` · `GET /api/clientes` · `GET/PUT /api/clientes/{id}` |
 | Disponibilidade | `GET/PUT /api/profissionais/{id}/jornada` · `POST/GET /api/profissionais/{id}/bloqueios` · `DELETE .../bloqueios/{bloqueioId}` · `GET /api/profissionais/{id}/horarios-livres?servicoId=&data=` |
+| Autenticação | `POST /api/auth/cadastro` · `POST /api/auth/login` · `POST /api/auth/refresh` · `POST /api/auth/logout` · `GET /api/auth/eu` |
 | Agendamentos | `POST /api/agendamentos` · `GET /api/agendamentos` · `GET /api/agendamentos/{id}` · `PATCH .../{id}/cancelar`, `/reagendar`, `/concluir` e `/nao-compareceu` |
 
 As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
@@ -158,7 +182,8 @@ Os erros seguem o padrão Problem Details (RFC 9457):
 - [x] **1. Cadastros:** profissionais, serviços e clientes
 - [x] **2. Disponibilidade:** horários de trabalho, folgas e horários livres
 - [x] **3. Reserva:** criação, cancelamento, reagendamento e conflito de horários
-- [ ] **4. Segurança:** JWT com papéis e login com Google
+- [x] **4. Segurança:** JWT com papéis, refresh token com rotação e regras por dono
+- [ ] **4b. Login com Google**
 - [ ] **5. Angular:** base, login e rotas protegidas
 - [ ] **6. Fluxo de reserva no front-end** com FullCalendar
 - [ ] **7. RabbitMQ:** eventos e e-mails de confirmação

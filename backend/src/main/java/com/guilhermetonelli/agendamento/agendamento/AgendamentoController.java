@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,10 +24,12 @@ import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoResponse;
 import com.guilhermetonelli.agendamento.agendamento.dto.CancelamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.dto.ReagendamentoRequest;
+import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+/** Clientes veem e mexem só nos próprios agendamentos; profissionais, só nos da própria agenda. */
 @RestController
 @RequestMapping("/api/agendamentos")
 @Tag(name = "Agendamentos", description = "Reserva, cancelamento e reagendamento de horários")
@@ -41,48 +44,54 @@ class AgendamentoController {
     @PostMapping
     @Operation(summary = "Reserva um horário livre")
     ResponseEntity<AgendamentoResponse> reservar(
-            @Valid @RequestBody AgendamentoRequest request, UriComponentsBuilder uri) {
-        AgendamentoResponse criado = service.reservar(request);
+            @Valid @RequestBody AgendamentoRequest request,
+            @AuthenticationPrincipal UsuarioLogado eu,
+            UriComponentsBuilder uri) {
+        AgendamentoResponse criado = service.reservar(request, eu);
         var local = uri.path("/api/agendamentos/{id}").buildAndExpand(criado.id()).toUri();
         return ResponseEntity.created(local).body(criado);
     }
 
     @GetMapping
-    @Operation(summary = "Lista agendamentos com filtros e paginação, em ordem cronológica")
+    @Operation(summary = "Lista os agendamentos visíveis para quem pede, com filtros e paginação")
     PagedModel<AgendamentoResponse> listar(
             @ParameterObject AgendamentoFiltro filtro,
-            @ParameterObject @PageableDefault(size = 20, sort = "inicio") Pageable pageable) {
-        return new PagedModel<>(service.listar(filtro, pageable));
+            @ParameterObject @PageableDefault(size = 20, sort = "inicio") Pageable pageable,
+            @AuthenticationPrincipal UsuarioLogado eu) {
+        return new PagedModel<>(service.listar(filtro, pageable, eu));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Busca um agendamento")
-    AgendamentoResponse buscar(@PathVariable UUID id) {
-        return service.buscar(id);
+    AgendamentoResponse buscar(@PathVariable UUID id, @AuthenticationPrincipal UsuarioLogado eu) {
+        return service.buscar(id, eu);
     }
 
     @PatchMapping("/{id}/cancelar")
-    @Operation(summary = "Cancela um agendamento confirmado que ainda não começou; o corpo com o motivo é opcional")
+    @Operation(summary = "Cancela um agendamento que ainda não começou; o corpo com o motivo é opcional")
     AgendamentoResponse cancelar(
-            @PathVariable UUID id, @Valid @RequestBody(required = false) CancelamentoRequest request) {
-        return service.cancelar(id, request == null ? null : request.motivo());
+            @PathVariable UUID id,
+            @Valid @RequestBody(required = false) CancelamentoRequest request,
+            @AuthenticationPrincipal UsuarioLogado eu) {
+        return service.cancelar(id, request == null ? null : request.motivo(), eu);
     }
 
     @PatchMapping("/{id}/reagendar")
     @Operation(summary = "Muda o horário, mantendo profissional e serviço")
-    AgendamentoResponse reagendar(@PathVariable UUID id, @Valid @RequestBody ReagendamentoRequest request) {
-        return service.reagendar(id, request);
+    AgendamentoResponse reagendar(
+            @PathVariable UUID id, @Valid @RequestBody ReagendamentoRequest request, @AuthenticationPrincipal UsuarioLogado eu) {
+        return service.reagendar(id, request, eu);
     }
 
     @PatchMapping("/{id}/concluir")
-    @Operation(summary = "Marca o atendimento como realizado")
-    AgendamentoResponse concluir(@PathVariable UUID id) {
-        return service.concluir(id);
+    @Operation(summary = "Marca o atendimento como realizado (profissional ou administrador)")
+    AgendamentoResponse concluir(@PathVariable UUID id, @AuthenticationPrincipal UsuarioLogado eu) {
+        return service.concluir(id, eu);
     }
 
     @PatchMapping("/{id}/nao-compareceu")
-    @Operation(summary = "Registra que o cliente não compareceu")
-    AgendamentoResponse naoCompareceu(@PathVariable UUID id) {
-        return service.registrarFalta(id);
+    @Operation(summary = "Registra que o cliente não compareceu (profissional ou administrador)")
+    AgendamentoResponse naoCompareceu(@PathVariable UUID id, @AuthenticationPrincipal UsuarioLogado eu) {
+        return service.registrarFalta(id, eu);
     }
 }

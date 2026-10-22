@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +25,7 @@ import com.guilhermetonelli.agendamento.disponibilidade.dto.BloqueioRequest;
 import com.guilhermetonelli.agendamento.disponibilidade.dto.BloqueioResponse;
 import com.guilhermetonelli.agendamento.disponibilidade.dto.HorarioLivreResponse;
 import com.guilhermetonelli.agendamento.disponibilidade.dto.JornadaDto;
+import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -55,27 +57,34 @@ class DisponibilidadeController {
 
     @PutMapping("/jornada")
     @Operation(summary = "Substitui a jornada semanal inteira")
-    JornadaDto definirJornada(@PathVariable UUID id, @Valid @RequestBody JornadaDto jornada) {
+    JornadaDto definirJornada(
+            @PathVariable UUID id, @Valid @RequestBody JornadaDto jornada, @AuthenticationPrincipal UsuarioLogado eu) {
+        eu.garantirAgendaDe(id);
         return jornadaService.definir(id, jornada);
     }
 
     @PostMapping("/bloqueios")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Bloqueia um período da agenda (folga, férias, ausência)")
-    BloqueioResponse bloquear(@PathVariable UUID id, @Valid @RequestBody BloqueioRequest request) {
+    BloqueioResponse bloquear(
+            @PathVariable UUID id, @Valid @RequestBody BloqueioRequest request, @AuthenticationPrincipal UsuarioLogado eu) {
+        eu.garantirAgendaDe(id);
         return bloqueioService.bloquear(id, request);
     }
 
     @GetMapping("/bloqueios")
-    @Operation(summary = "Lista os bloqueios que tocam o período, em ordem cronológica")
-    List<BloqueioResponse> listarBloqueios(@PathVariable UUID id, @ParameterObject BloqueioFiltro filtro) {
+    @Operation(summary = "Lista os bloqueios que tocam o período, em ordem cronológica (o motivo é privado)")
+    List<BloqueioResponse> listarBloqueios(
+            @PathVariable UUID id, @ParameterObject BloqueioFiltro filtro, @AuthenticationPrincipal UsuarioLogado eu) {
+        eu.garantirAgendaDe(id);
         return bloqueioService.listar(id, filtro);
     }
 
     @DeleteMapping("/bloqueios/{bloqueioId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Remove um bloqueio")
-    void removerBloqueio(@PathVariable UUID id, @PathVariable UUID bloqueioId) {
+    void removerBloqueio(@PathVariable UUID id, @PathVariable UUID bloqueioId, @AuthenticationPrincipal UsuarioLogado eu) {
+        eu.garantirAgendaDe(id);
         bloqueioService.remover(id, bloqueioId);
     }
 

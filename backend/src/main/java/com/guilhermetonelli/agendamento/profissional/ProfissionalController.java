@@ -10,6 +10,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +27,7 @@ import com.guilhermetonelli.agendamento.profissional.dto.ProfissionalRequest;
 import com.guilhermetonelli.agendamento.profissional.dto.ProfissionalResponse;
 import com.guilhermetonelli.agendamento.profissional.dto.ProfissionalResumoResponse;
 import com.guilhermetonelli.agendamento.profissional.dto.ServicosDoProfissionalRequest;
+import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,17 +53,20 @@ class ProfissionalController {
     }
 
     @GetMapping
-    @Operation(summary = "Lista profissionais com filtros e paginação")
+    @Operation(summary = "Lista profissionais com filtros e paginação (contato só para administradores)")
     PagedModel<ProfissionalResumoResponse> listar(
             @ParameterObject ProfissionalFiltro filtro,
-            @ParameterObject @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
-        return new PagedModel<>(service.listar(filtro, pageable));
+            @ParameterObject @PageableDefault(size = 20, sort = "nome") Pageable pageable,
+            @AuthenticationPrincipal UsuarioLogado eu) {
+        var pagina = service.listar(filtro, pageable);
+        return new PagedModel<>(eu != null && eu.admin() ? pagina : pagina.map(ProfissionalResumoResponse::semContato));
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Busca um profissional, com os serviços que ele atende")
-    ProfissionalResponse buscar(@PathVariable UUID id) {
-        return service.buscar(id);
+    @Operation(summary = "Busca um profissional, com os serviços que ele atende (contato só para ele e administradores)")
+    ProfissionalResponse buscar(@PathVariable UUID id, @AuthenticationPrincipal UsuarioLogado eu) {
+        ProfissionalResponse profissional = service.buscar(id);
+        return eu != null && (eu.admin() || eu.ehProfissional(id)) ? profissional : profissional.semContato();
     }
 
     @PutMapping("/{id}")
