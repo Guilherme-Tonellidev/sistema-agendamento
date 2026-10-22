@@ -131,7 +131,7 @@ As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate
 | `agendamento.intervalo-entre-horarios` | `PT15M` | Os horários oferecidos começam em múltiplos deste intervalo |
 | `agendamento.janela-de-reserva` | `P90D` | Até quanto tempo à frente é possível reservar |
 | `agendamento.antecedencia-minima-reserva` | `PT1H30M` | Prazo mínimo entre a reserva e o início do horário |
-| `agendamento.antecedencia-minima-cancelamento` | `PT2H` | Prazo mínimo para o cliente cancelar |
+| `agendamento.antecedencia-minima-cancelamento` | `PT2H` | Prazo mínimo para o cliente cancelar ou reagendar |
 
 Todas podem vir de variáveis de ambiente (ex.: `AGENDAMENTO_FUSO_HORARIO`).
 Os erros seguem o padrão Problem Details (RFC 9457):

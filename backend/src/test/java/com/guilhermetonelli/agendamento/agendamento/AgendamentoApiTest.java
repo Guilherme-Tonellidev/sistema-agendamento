@@ -350,6 +350,30 @@ class AgendamentoApiTest extends IntegracaoTest {
     }
 
     @Test
+    void clienteReagendaComAntecedenciaMinima() {
+        UUID agendamento = id(reservar(ana, carlos, AS_9H));
+        api = apiComo(comoCliente(carlos));
+
+        relogio.ajustar(Instant.parse("2026-10-21T10:01:00Z"));
+        var tarde = reagendar(agendamento, "2026-10-21T13:00:00Z");
+
+        relogio.ajustar(Instant.parse("2026-10-21T10:00:00Z"));
+        var noLimite = reagendar(agendamento, "2026-10-21T13:00:00Z");
+
+        assertThat(tarde).satisfies(regraDeNegocio("O reagendamento precisa ser feito com pelo menos 2h de antecedência"));
+        assertThat(noLimite.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void soOClienteTemPrazoParaReagendar() {
+        UUID agendamento = id(reservar(ana, carlos, AS_9H));
+
+        relogio.ajustar(Instant.parse("2026-10-21T11:59:00Z"));
+
+        assertThat(reagendar(agendamento, "2026-10-21T13:30:00Z").getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void reagendaComADuracaoAtualEOPrecoCombinado() {
         UUID agendamento = id(reservar(ana, carlos, AS_8H));
         api.put().uri("/api/servicos/{id}", corte)
