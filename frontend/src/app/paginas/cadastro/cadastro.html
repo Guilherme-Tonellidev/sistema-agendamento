@@ -1,0 +1,84 @@
+<div class="acesso">
+  <app-vitrine />
+
+  <main class="painel">
+    <form class="formulario" [formRoot]="conta">
+      <h1>Criar conta</h1>
+
+      <div class="campo">
+        @let nome = conta.nome();
+        <label for="nome">Nome</label>
+        <input
+          id="nome"
+          autocomplete="name"
+          [formField]="conta.nome"
+          [attr.aria-invalid]="nome.touched() && nome.invalid()"
+          aria-describedby="nome-erro"
+        />
+        @if (nome.touched() && nome.errors()[0]; as erro) {
+          <p class="erro-campo" id="nome-erro">{{ erro.message }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        @let email = conta.email();
+        <label for="email">E-mail</label>
+        <input
+          id="email"
+          type="email"
+          autocomplete="email"
+          [formField]="conta.email"
+          [attr.aria-invalid]="email.touched() && email.invalid()"
+          aria-describedby="email-erro"
+        />
+        @if (email.touched() && email.errors()[0]; as erro) {
+          <p class="erro-campo" id="email-erro">{{ erro.message }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        @let telefone = conta.telefone();
+        <label for="telefone">Celular <span class="opcional">(opcional, com DDD)</span></label>
+        <input
+          id="telefone"
+          type="tel"
+          autocomplete="tel-national"
+          [formField]="conta.telefone"
+          [attr.aria-invalid]="telefone.touched() && telefone.invalid()"
+          aria-describedby="telefone-erro"
+        />
+        @if (telefone.touched() && telefone.errors()[0]; as erro) {
+          <p class="erro-campo" id="telefone-erro">{{ erro.message }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        @let senha = conta.senha();
+        <label for="senha">Senha</label>
+        <input
+          id="senha"
+          type="password"
+          autocomplete="new-password"
+          [formField]="conta.senha"
+          [attr.aria-invalid]="senha.touched() && senha.invalid()"
+          aria-describedby="senha-erro"
+        />
+        @if (senha.touched() && senha.errors()[0]; as erro) {
+          <p class="erro-campo" id="senha-erro">{{ erro.message }}</p>
+        }
+      </div>
+
+      @if (conta().errors()[0]; as erro) {
+        <p class="erro" role="alert">{{ erro.message }}</p>
+      }
+
+      <button type="submit" class="botao primario" [disabled]="conta().submitting()">
+        {{ conta().submitting() ? 'Criando…' : 'Criar conta' }}
+      </button>
+
+      <p class="alternativa">
+        Já tem conta? <a routerLink="/entrar" [queryParams]="{ voltar: voltar() }">Entrar</a>
+      </p>
+    </form>
+  </main>
+</div>

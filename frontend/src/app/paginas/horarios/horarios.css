@@ -1,0 +1,312 @@
+/* Espaços e tamanhos acompanham a altura da tela: num notebook, tudo cabe sem rolar a página. */
+.pagina {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 28vw, 360px);
+  gap: clamp(32px, 4vw, 56px);
+  padding: clamp(14px, 4dvh, 28px) clamp(16px, 4vw, 56px) clamp(16px, 5dvh, 48px);
+}
+
+.escolha {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 3dvh, 22px);
+  min-width: 0;
+}
+
+.linha-servico {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.linha-servico p {
+  flex: 1;
+  margin: 0;
+  font-size: 17px;
+}
+
+.suave {
+  color: var(--texto-suave);
+}
+
+.linha-barbeiro {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.fichas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ficha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: clamp(38px, 7dvh, 44px);
+  padding: 0 18px;
+  border: 1.5px solid var(--cinza);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--texto-claro);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.ficha.com-sigla {
+  padding-left: 6px;
+}
+
+.ficha[aria-checked='true'] {
+  border-color: var(--dourado-botao);
+  background: var(--dourado-botao);
+  color: var(--carvao);
+}
+
+.detalhe {
+  font-weight: 400;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.sigla {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--linha);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ficha[aria-checked='true'] .sigla {
+  background: var(--carvao);
+  color: var(--dourado-botao);
+}
+
+.dias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dia {
+  min-width: 60px;
+  padding: clamp(5px, 1.2dvh, 8px) 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--texto-claro);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.dia strong {
+  font-family: var(--fonte-titulo);
+  font-weight: 700;
+  font-size: clamp(22px, 4.5dvh, 28px);
+  line-height: 1;
+}
+
+.dia[aria-pressed='true'] {
+  background: var(--dourado-botao);
+  color: var(--carvao);
+}
+
+.dia:disabled {
+  color: var(--cinza);
+  cursor: not-allowed;
+}
+
+.periodos {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 2.5dvh, 20px);
+}
+
+/* Enquanto busca outro dia, o que já estava na tela esmaece em vez de sumir. */
+.periodos,
+.resumo {
+  transition: opacity 0.2s;
+}
+
+.carregando {
+  opacity: 0.35;
+}
+
+.periodo {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.4dvh, 10px);
+}
+
+/* Período sem horários ocupa uma linha só. */
+.periodo:has(> .vazio) {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.titulo-periodo {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.titulo-periodo small {
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(66px, 6vw, 84px), 1fr));
+  gap: clamp(6px, 1.2dvh, 8px);
+}
+
+.horario {
+  min-height: clamp(36px, 7dvh, 44px);
+  border: 1.5px solid var(--cinza);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--texto-claro);
+  font-family: var(--fonte-titulo);
+  font-weight: 700;
+  font-size: clamp(18px, 3.4dvh, 21px);
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.horario:hover {
+  background: var(--linha);
+}
+
+.horario[aria-checked='true'] {
+  border-color: var(--dourado-botao);
+  background: var(--dourado-botao);
+  color: var(--carvao);
+}
+
+.vazio,
+.aviso {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Ticket */
+.bilhete {
+  align-self: start;
+  position: sticky;
+  top: 24px;
+}
+
+.rotulo {
+  margin: 0;
+  font-size: 15px;
+  color: var(--texto-escuro-suave);
+}
+
+.hora-grande {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-weight: 800;
+  font-size: clamp(60px, 13dvh, 96px);
+  line-height: 0.85;
+}
+
+.bilhete .botao {
+  min-height: clamp(44px, 8dvh, 54px);
+}
+
+[topo] p:last-child {
+  margin: 0;
+  font-size: 16px;
+}
+
+dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 20px;
+  font-size: 15px;
+}
+
+dt {
+  color: var(--texto-escuro-suave);
+}
+
+dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.nota {
+  display: block;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--texto-escuro-suave);
+}
+
+.centro {
+  text-align: center;
+}
+
+.bilhete :focus-visible {
+  outline-color: var(--tinta);
+}
+
+/*
+ * No computador a página ocupa exatamente a janela: só a grade de horários rola, e só num dia com
+ * horários demais para a altura da tela. Abaixo de 460px de altura, a página volta a rolar inteira.
+ */
+@media (min-width: 961px) {
+  :host {
+    display: flex;
+    flex-direction: column;
+    height: max(100dvh, 460px);
+  }
+
+  .pagina {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .escolha {
+    min-height: 0;
+  }
+
+  /* A folga de 5px deixa o contorno de foco dos horários aparecer inteiro dentro da rolagem. */
+  .periodos {
+    flex: 1;
+    min-height: 120px;
+    margin: -5px;
+    padding: 5px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+}
+
+@media (max-width: 960px) {
+  .pagina {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .bilhete {
+    position: static;
+  }
+}

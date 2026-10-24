@@ -2,7 +2,8 @@
 # Estas credenciais existem só na sua máquina; produção usa variáveis de ambiente.
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/agendamento
+    # Mesma porta que o docker-compose.yml publica (POSTGRES_PORT).
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5433}/agendamento
     username: agendamento
     password: agendamento
 

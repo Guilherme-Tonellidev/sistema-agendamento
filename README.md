@@ -1,6 +1,7 @@
 # Sistema de Agendamento
 
 [![Backend CI](https://github.com/Guilherme-Tonellidev/sistema-agendamento/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/Guilherme-Tonellidev/sistema-agendamento/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/Guilherme-Tonellidev/sistema-agendamento/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/Guilherme-Tonellidev/sistema-agendamento/actions/workflows/frontend-ci.yml)
 
 Plataforma de agendamento de serviços (barbearia, clínica, salas): profissionais definem sua
 disponibilidade, clientes reservam horários e o sistema garante que nunca existam dois
@@ -15,14 +16,14 @@ agendamentos sobrepostos para o mesmo profissional.
 | Back-end | Java 21, Spring Boot 4, Spring Security (JWT), Spring Data JPA, Bean Validation, MapStruct, Flyway |
 | Documentação | OpenAPI (springdoc) e Swagger UI |
 | Banco de dados | PostgreSQL 18 |
-| Front-end | Angular *(etapa 5)* |
+| Front-end | Angular 22 (signals, Signal Forms, sem zone.js), Vitest |
 | Mensageria e cache | RabbitMQ *(etapa 7)*, Redis *(etapa 9)* |
 | Testes | JUnit 5, AssertJ, Testcontainers |
 | Entrega | Docker, GitHub Actions |
 
 ## Como rodar
 
-**Pré-requisitos:** JDK 21 e Docker Desktop.
+**Pré-requisitos:** JDK 21, Docker Desktop e, para o front-end, Node.js 24.
 
 ### Opção 1: só com Testcontainers (mais simples)
 
@@ -36,21 +37,39 @@ O Spring sobe um PostgreSQL em container automaticamente e o desliga ao encerrar
 ### Opção 2: com Docker Compose
 
 ```bash
-docker compose up -d
+docker compose up -d --wait   # espera o PostgreSQL ficar pronto
 cd backend
 ./mvnw spring-boot:run
 ```
+
+O PostgreSQL do Compose fica na porta **5433** do seu computador, para não disputar a 5432 com um
+PostgreSQL instalado direto no sistema (dá para trocar com a variável `POSTGRES_PORT`).
 
 Confira em <http://localhost:8080/actuator/health> e veja a documentação da API em
 <http://localhost:8080/swagger-ui.html>. Em desenvolvimento já existe um administrador
 `admin@agendamento.local` / `admin-local-123`: faça login em `/api/auth/login` e cole o token em
 **Authorize**.
 
+### Front-end
+
+Com a API no ar (qualquer opção acima), em outro terminal:
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Abra <http://localhost:4200>. Mais detalhes em [`frontend/README.md`](frontend/README.md).
+
 ### Testes
 
 ```bash
 cd backend
 ./mvnw verify
+
+cd ../frontend
+npm test
 ```
 
 > No Windows, use `mvnw.cmd` no lugar de `./mvnw` se não estiver no Git Bash.
@@ -184,7 +203,7 @@ Os erros seguem o padrão Problem Details (RFC 9457):
 - [x] **3. Reserva:** criação, cancelamento, reagendamento e conflito de horários
 - [x] **4. Segurança:** JWT com papéis, refresh token com rotação e regras por dono
 - [ ] **4b. Login com Google**
-- [ ] **5. Angular:** base, login e rotas protegidas
+- [ ] **5. Angular:** base, login e rotas protegidas *(em andamento)*
 - [ ] **6. Fluxo de reserva no front-end** com FullCalendar
 - [ ] **7. RabbitMQ:** eventos e e-mails de confirmação
 - [ ] **8. Quartz:** lembretes 24h antes

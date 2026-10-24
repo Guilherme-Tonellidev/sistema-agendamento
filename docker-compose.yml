@@ -10,7 +10,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-agendamento}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agendamento}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # 5433 no computador: a 5432 costuma ser de um PostgreSQL instalado direto no sistema.
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       # A partir do PostgreSQL 18, o volume é montado em /var/lib/postgresql.
       - postgres-data:/var/lib/postgresql

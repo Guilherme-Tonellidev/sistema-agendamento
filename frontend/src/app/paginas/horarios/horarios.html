@@ -1,0 +1,175 @@
+<app-cabecalho />
+
+<main class="pagina">
+  <section class="escolha" aria-label="Escolha do horário">
+    <div class="linha-servico">
+      @if (servicoAtual(); as servico) {
+        @let preco = servico.preco | currency: 'BRL';
+        <p>
+          <strong>{{ servico.nome }}</strong> · {{ servico.duracaoMinutos }} min · {{ preco }}
+        </p>
+        <button
+          type="button"
+          class="link"
+          [attr.aria-expanded]="escolhendoServico()"
+          (click)="escolhendoServico.set(!escolhendoServico())"
+        >
+          Trocar serviço
+        </button>
+      } @else if (!falhou()) {
+        <p class="suave">Carregando serviços…</p>
+      }
+    </div>
+
+    @if (escolhendoServico()) {
+      <div class="fichas" role="radiogroup" aria-label="Serviço">
+        @for (servico of servicos(); track servico.id) {
+          <button
+            type="button"
+            role="radio"
+            class="ficha"
+            [attr.aria-checked]="servico.id === servicoAtual()?.id"
+            (click)="escolherServico(servico)"
+          >
+            {{ servico.nome }}
+            <span class="detalhe">
+              {{ servico.duracaoMinutos }} min · {{ servico.preco | currency: 'BRL' }}
+            </span>
+          </button>
+        }
+      </div>
+    }
+
+    <div class="linha-barbeiro">
+      <span id="com-quem" class="suave">Com quem?</span>
+      <div class="fichas" role="radiogroup" aria-labelledby="com-quem">
+        <button
+          type="button"
+          role="radio"
+          class="ficha"
+          [attr.aria-checked]="barbeiroAtual() === null"
+          (click)="escolherBarbeiro(null)"
+        >
+          Sem preferência
+        </button>
+        @for (barbeiro of barbeiros(); track barbeiro.id) {
+          <button
+            type="button"
+            role="radio"
+            class="ficha com-sigla"
+            [attr.aria-checked]="barbeiro.id === barbeiroAtual()?.id"
+            (click)="escolherBarbeiro(barbeiro.id)"
+          >
+            <span class="sigla" aria-hidden="true">{{ sigla(barbeiro.nome) }}</span>
+            {{ barbeiro.nome }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="dias" role="group" aria-label="Dia">
+      @for (dia of dias; track dia.data) {
+        <button
+          type="button"
+          class="dia"
+          [attr.aria-pressed]="dia.data === diaAtual()"
+          [disabled]="dia.fechado"
+          (click)="escolherDia(dia.data)"
+        >
+          <span>{{ dia.rotulo }}</span>
+          <strong>{{ dia.numero }}</strong>
+        </button>
+      }
+    </div>
+
+    <div class="periodos" [class.carregando]="buscando()" [attr.aria-busy]="buscando()">
+      @if (falhou()) {
+        <p class="aviso" role="alert">
+          Não foi possível carregar os horários.
+          <button type="button" class="link" (click)="tentarDeNovo()">Tentar de novo</button>
+        </p>
+      } @else if (buscando() && opcoes().length === 0) {
+        <p class="suave vazio">Buscando horários livres…</p>
+      } @else {
+        @for (periodo of periodos(); track periodo.nome) {
+          @let quantos = periodo.horarios.length;
+          <div class="periodo" role="radiogroup" [attr.aria-label]="periodo.nome">
+            <p class="titulo-periodo">
+              {{ periodo.nome }}
+              @if (quantos) {
+                <small>{{ quantos }} {{ quantos === 1 ? 'horário' : 'horários' }}</small>
+              }
+            </p>
+            @if (quantos) {
+              <div class="grade">
+                @for (opcao of periodo.horarios; track opcao.inicio) {
+                  <button
+                    type="button"
+                    role="radio"
+                    class="horario"
+                    [attr.aria-checked]="opcao === escolhida()"
+                    (click)="escolherHorario(opcao)"
+                  >
+                    {{ opcao.hora }}
+                  </button>
+                }
+              </div>
+            } @else {
+              <p class="suave vazio">Sem horários livres nesse período.</p>
+            }
+          </div>
+        }
+      }
+    </div>
+  </section>
+
+  <app-ingresso class="bilhete" role="region" aria-label="Sua reserva">
+    <div topo class="resumo" [class.carregando]="buscando() && !reservado()">
+      @if (bilhete(); as bilhete) {
+        <p class="rotulo">{{ reservado() ? 'Reservado!' : 'Seu horário' }}</p>
+        <p class="hora-grande">{{ bilhete.hora }}</p>
+        <p>até {{ bilhete.fim }}, {{ bilhete.data }}</p>
+      } @else {
+        <p class="rotulo">Seu horário</p>
+        <p class="hora-grande">--:--</p>
+        <p>Escolha um dia com horários livres.</p>
+      }
+    </div>
+
+    <dl>
+      <dt>Serviço</dt>
+      <dd>{{ servicoAtual()?.nome }}, {{ servicoAtual()?.duracaoMinutos }} minutos</dd>
+      <dt>Com</dt>
+      <dd>
+        {{ bilhete()?.barbeiro ?? '—' }}
+        @if (semPreferencia()) {
+          <span class="nota">livre nesse horário</span>
+        }
+      </dd>
+      <dt>Valor</dt>
+      <dd>{{ servicoAtual()?.preco | currency: 'BRL' }}</dd>
+    </dl>
+
+    @if (reservado()) {
+      <a routerLink="/minhas-reservas" class="botao primario">Ver minhas reservas</a>
+      <button type="button" class="botao secundario" (click)="outroHorario()">
+        Escolher outro horário
+      </button>
+    } @else if (podeReservar()) {
+      <button
+        type="button"
+        class="botao primario"
+        [disabled]="!bilhete() || buscando() || reservando()"
+        (click)="reservar()"
+      >
+        {{ reservando() ? 'Reservando…' : 'Reservar às ' + (bilhete()?.hora ?? '--:--') }}
+      </button>
+      @if (erroDaReserva(); as erro) {
+        <p class="erro" role="alert">{{ erro }}</p>
+      }
+      <p class="nota centro">Dá para cancelar sem custo até 2 horas antes.</p>
+    } @else {
+      <p class="nota centro">Reservas são feitas pela conta do cliente.</p>
+    }
+  </app-ingresso>
+</main>

@@ -1,0 +1,64 @@
+<section class="vitrine" aria-label="A barbearia">
+  <div class="poste" aria-hidden="true">
+    <span class="tampa"></span>
+    <span class="anel"></span>
+    <span class="listras" [class.girando]="aberto()"></span>
+    <span class="anel"></span>
+    <span class="tampa base"></span>
+  </div>
+
+  <div class="janela">
+    <div class="letreiro">
+      <svg class="arco" aria-hidden="true" viewBox="0 0 420 150">
+        <defs>
+          <g id="vitrine-lamina">
+            <path d="M 0 -80 C 5 -58 6.5 -26 5.5 2 L -5.5 2 C -6 -26 -4.5 -58 0 -80 Z" />
+            <path d="M -4 0 C -4 12 0.5 22 4.5 31 L 12.5 29.5 C 8 21 4 11 4 0 Z" />
+            <path
+              fill-rule="evenodd"
+              d="M -3 44 a 13 14.5 0 1 0 26 0 a 13 14.5 0 1 0 -26 0 Z M 2.5 44 a 7.5 9 0 1 0 15 0 a 7.5 9 0 1 0 -15 0 Z"
+            />
+          </g>
+          <g id="vitrine-tesoura" stroke-linejoin="round">
+            <use href="#vitrine-lamina" transform="scale(-1 1) rotate(-4)" class="contorno" />
+            <use href="#vitrine-lamina" transform="scale(-1 1) rotate(-4)" class="ouro" />
+            <use href="#vitrine-lamina" transform="rotate(-4)" class="contorno" />
+            <use href="#vitrine-lamina" transform="rotate(-4)" class="ouro" />
+            <circle r="3" class="pino" />
+          </g>
+          <filter id="vitrine-sombra" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow
+              dx="5"
+              dy="6.5"
+              stdDeviation="0"
+              flood-color="#4A3712"
+              flood-opacity="1"
+            />
+          </filter>
+        </defs>
+        <path id="vitrine-curva" d="M 30 90 Q 210 -6 390 90" fill="none" />
+        <text class="barbearia">
+          <textPath href="#vitrine-curva" startOffset="50%">BARBEARIA</textPath>
+        </text>
+        <g transform="translate(210 100) scale(0.6)" filter="url(#vitrine-sombra)">
+          <use href="#vitrine-tesoura" transform="rotate(-45) translate(0 11)" />
+          <use href="#vitrine-tesoura" transform="rotate(45) translate(0 11)" />
+        </g>
+      </svg>
+      <p class="nome"><span class="so-leitor">Barbearia </span>Tonelli</p>
+      <p class="servicos">Corte, barba e acabamento</p>
+    </div>
+
+    <div class="rodape">
+      <dl class="horarios" aria-label="Horário de funcionamento">
+        @for (horario of horarios(); track horario.rotulo) {
+          <div class="dia" [class.hoje]="horario.hoje">
+            <dt>{{ horario.rotulo }}<span class="pontilhado" aria-hidden="true"></span></dt>
+            <dd>{{ horario.valor }}</dd>
+          </div>
+        }
+      </dl>
+      <p class="neon" [class.aceso]="aberto()">{{ aberto() ? 'aberto' : 'fechado' }}</p>
+    </div>
+  </div>
+</section>
