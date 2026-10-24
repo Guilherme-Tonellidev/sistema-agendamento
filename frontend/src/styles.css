@@ -1,0 +1,145 @@
+/* Barbearia Tonelli: carvão, latão e papel creme; o vermelho fica para o poste e os avisos. */
+:root {
+  color-scheme: dark;
+
+  --carvao: #1c1917;
+  --carvao-escuro: #141210;
+  --vidro: #1f1b18;
+  --moldura: #0b0908;
+  --linha: #3a342e;
+  --cinza: #6f675c;
+
+  --dourado: #d8b25a;
+  --dourado-botao: #c8a04b;
+  --dourado-claro: #e2c27a;
+  --sombra-dourada: #4a3712;
+  --latao: #8a6a2c;
+
+  --creme: #f3ecdf;
+  --creme-claro: #fffdf8;
+  --linha-papel: #c9bfae;
+  --tinta: #1c1917;
+
+  --texto-claro: #efe7d8;
+  --texto-suave: #a79f8f;
+  --texto-escuro-suave: #5e574d;
+
+  --vermelho-poste: #b3261e;
+  --erro: #a8231c;
+  --neon-verde: #2ee66b;
+  --neon-vermelho: #ff4b3e;
+
+  --fonte-texto: Figtree, system-ui, sans-serif;
+  --fonte-titulo: 'Big Shoulders', 'Arial Narrow', sans-serif;
+  --fonte-letreiro: 'Big Shoulders Inline', 'Big Shoulders', sans-serif;
+  --fonte-neon: 'Tilt Neon', system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--carvao);
+  color: var(--texto-claro);
+  font-family: var(--fonte-texto);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--dourado-botao);
+}
+
+a:hover {
+  color: var(--dourado-claro);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 3px solid var(--dourado-botao);
+  outline-offset: 2px;
+}
+
+/* Botões da casa: dourado na ação principal, contorno na secundária. */
+.botao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 17px;
+  text-decoration: none;
+}
+
+.botao.primario {
+  border: 2px solid var(--tinta);
+  background: var(--dourado-botao);
+  color: var(--tinta);
+}
+
+.botao.secundario {
+  border: 1.5px solid var(--tinta);
+  background: transparent;
+  color: var(--tinta);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.botao:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Botão com cara de link, para ações pequenas no meio do texto. */
+.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--dourado-botao);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+/* Mensagem de erro que a pessoa precisa ler (geralmente com role="alert"). */
+.erro {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--erro);
+}
+
+/* Texto só para leitores de tela. */
+.so-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

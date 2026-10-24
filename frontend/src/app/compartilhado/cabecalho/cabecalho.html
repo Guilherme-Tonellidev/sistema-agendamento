@@ -1,0 +1,21 @@
+<header class="cabecalho">
+  <a routerLink="/" class="logo">
+    <app-marca [tamanho]="34" />
+    <span class="nome">Tonelli</span>
+    <span class="tipo">barbearia</span>
+  </a>
+
+  <nav aria-label="Principal">
+    @for (link of links(); track link.rotulo) {
+      <a [routerLink]="link.rota" routerLinkActive="ativo" ariaCurrentWhenActive="page">
+        {{ link.rotulo }}
+      </a>
+    }
+    @if (sessao.logado()) {
+      <span class="avatar" aria-hidden="true">{{ inicial() }}</span>
+      <button type="button" class="sair" (click)="sessao.sair()">Sair</button>
+    } @else {
+      <a routerLink="/entrar" class="entrar">Entrar</a>
+    }
+  </nav>
+</header>

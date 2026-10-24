@@ -1,0 +1,117 @@
+/* Entrar e Criar conta: a vitrine à esquerda e o formulário no papel creme à direita. */
+.acesso {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 720px) minmax(0, 1fr);
+  background: var(--creme);
+}
+
+/* Espaços e tamanhos acompanham a altura da tela, para o formulário caber sem rolar. */
+.painel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(14px, 3.5dvh, 26px);
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: clamp(20px, 6dvh, 56px) 24px;
+  box-sizing: border-box;
+  color: var(--tinta);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 2.2dvh, 16px);
+}
+
+h1 {
+  margin: 0 0 6px;
+  font-family: var(--fonte-titulo);
+  font-weight: 800;
+  font-size: clamp(48px, 11dvh, 72px);
+  line-height: 0.85;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.opcional {
+  font-weight: 400;
+  color: var(--texto-escuro-suave);
+}
+
+input {
+  min-height: clamp(42px, 8dvh, 50px);
+  box-sizing: border-box;
+  border: 2px solid var(--tinta);
+  border-radius: 12px;
+  background: var(--creme-claro);
+  padding: 0 16px;
+  font-size: 16px;
+  color: var(--tinta);
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--erro);
+}
+
+.erro-campo {
+  margin: 0;
+  font-size: 14px;
+  color: var(--erro);
+}
+
+.botao {
+  min-height: clamp(44px, 8.5dvh, 54px);
+}
+
+/* Desabilitado aqui só enquanto envia. */
+.botao:disabled {
+  cursor: progress;
+}
+
+.alternativa {
+  margin: 0;
+  font-size: 15px;
+  text-align: center;
+}
+
+.painel a {
+  color: var(--tinta);
+  font-weight: 700;
+}
+
+.painel a:hover {
+  color: #6b5220;
+}
+
+.sem-entrar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: clamp(12px, 3dvh, 22px);
+  border-top: 1px solid var(--linha-papel);
+  font-size: 15px;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline-color: var(--tinta);
+}
+
+@media (max-width: 900px) {
+  .acesso {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,90 @@
+/* Em telas baixas (notebook, zoom do navegador) o cabeçalho encolhe para sobrar espaço à página. */
+.cabecalho {
+  min-height: clamp(60px, 12dvh, 76px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 clamp(16px, 4vw, 56px);
+  border-bottom: 1px solid var(--linha);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.nome {
+  font-family: var(--fonte-letreiro);
+  font-weight: 800;
+  font-size: clamp(32px, 6.4dvh, 40px);
+  line-height: 1;
+  color: var(--dourado);
+}
+
+.tipo {
+  align-self: flex-end;
+  padding-bottom: 6px;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+nav a {
+  color: var(--texto-claro);
+  text-decoration: none;
+  padding: 4px 0;
+  border-bottom: 3px solid transparent;
+}
+
+nav a.ativo {
+  font-weight: 700;
+  border-bottom-color: var(--dourado-botao);
+}
+
+nav a.entrar {
+  border: 1.5px solid var(--texto-claro);
+  border-radius: 999px;
+  padding: 10px 20px;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--dourado-botao);
+  color: var(--carvao);
+  font-weight: 700;
+}
+
+.sair {
+  border: 0;
+  background: none;
+  color: var(--texto-suave);
+  padding: 8px 0;
+}
+
+.sair:hover {
+  color: var(--texto-claro);
+}
+
+@media (max-width: 640px) {
+  .tipo {
+    display: none;
+  }
+
+  nav {
+    gap: 16px;
+  }
+}

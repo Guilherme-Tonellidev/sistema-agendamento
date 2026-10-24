@@ -1,0 +1,71 @@
+<div class="acesso">
+  <app-vitrine />
+
+  <main class="painel">
+    <form class="formulario" [formRoot]="login">
+      <h1>Entrar</h1>
+
+      <div class="campo">
+        @let email = login.email();
+        <label for="email">E-mail</label>
+        <input
+          id="email"
+          type="email"
+          autocomplete="email"
+          [formField]="login.email"
+          [attr.aria-invalid]="email.touched() && email.invalid()"
+          aria-describedby="email-erro"
+        />
+        @if (email.touched() && email.errors()[0]; as erro) {
+          <p class="erro-campo" id="email-erro">{{ erro.message }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        @let senha = login.senha();
+        <label for="senha">Senha</label>
+        <input
+          id="senha"
+          type="password"
+          autocomplete="current-password"
+          [formField]="login.senha"
+          [attr.aria-invalid]="senha.touched() && senha.invalid()"
+          aria-describedby="senha-erro"
+        />
+        @if (senha.touched() && senha.errors()[0]; as erro) {
+          <p class="erro-campo" id="senha-erro">{{ erro.message }}</p>
+        }
+      </div>
+
+      @if (login().errors()[0]; as erro) {
+        <p class="erro" role="alert">{{ erro.message }}</p>
+      }
+
+      <button type="submit" class="botao primario" [disabled]="login().submitting()">
+        {{ login().submitting() ? 'Entrando…' : 'Entrar' }}
+      </button>
+
+      <p class="alternativa">
+        Primeira vez? <a routerLink="/cadastro" [queryParams]="{ voltar: voltar() }">Criar conta</a>
+      </p>
+    </form>
+
+    <a routerLink="/horarios" class="sem-entrar">
+      <svg
+        aria-hidden="true"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M12 7v5l3 2"></path>
+      </svg>
+      Ver horários livres sem entrar
+    </a>
+  </main>
+</div>

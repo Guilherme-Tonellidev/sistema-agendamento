@@ -1,0 +1,237 @@
+:host {
+  display: block;
+}
+
+/* Tamanhos que acompanham a altura da tela: num notebook a vitrine cabe inteira, sem rolar. */
+.vitrine {
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  gap: 28px;
+  padding: clamp(16px, 7dvh, 52px) 56px clamp(16px, 7dvh, 52px) 40px;
+  background: var(--carvao-escuro);
+  color: var(--texto-claro);
+}
+
+/* Poste de barbeiro: as listras giram só com a casa aberta. */
+.poste {
+  width: 56px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: center;
+}
+
+.tampa {
+  width: 46px;
+  height: 26px;
+  border-radius: 23px 23px 6px 6px;
+  background: linear-gradient(90deg, #8a6a2c, #e9cf8e 45%, #8a6a2c);
+}
+
+.tampa.base {
+  border-radius: 6px 6px 23px 23px;
+}
+
+.anel {
+  width: 30px;
+  height: 10px;
+  background: linear-gradient(90deg, #6b5220, var(--dourado) 45%, #6b5220);
+}
+
+.listras {
+  width: 38px;
+  height: clamp(140px, 52dvh, 340px);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--vermelho-poste) 0 22px,
+    var(--creme) 22px 44px
+  );
+  /* Altura do ladrilho = período vertical das listras a 45°, para a volta não ter emenda. */
+  background-size: 100% 62.23px;
+  box-shadow:
+    inset 9px 0 10px rgb(0 0 0 / 35%),
+    inset -9px 0 10px rgb(0 0 0 / 35%);
+}
+
+.listras.girando {
+  animation: girar 2.4s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    background-position: 0 -62.23px;
+  }
+}
+
+/* Vidro da vitrine, com moldura de latão e reflexos. */
+.janela {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(12px, 4dvh, 32px);
+  padding: clamp(16px, 4.5dvh, 34px) 40px;
+  border: 12px solid var(--moldura);
+  outline: 2px solid var(--latao);
+  outline-offset: -8px;
+  border-radius: 4px;
+  background-color: var(--vidro);
+  background-image: linear-gradient(
+    115deg,
+    transparent 0 56%,
+    rgb(255 255 255 / 4.5%) 56% 63%,
+    transparent 63% 69%,
+    rgb(255 255 255 / 3%) 69% 72%,
+    transparent 72%
+  );
+}
+
+.letreiro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* O arco tem proporção 420 x 150: a largura limita também a altura dele. */
+.arco {
+  width: min(420px, 100%, 56dvh);
+  height: auto;
+}
+
+.barbearia {
+  font-family: var(--fonte-letreiro);
+  font-weight: 800;
+  font-size: 50px;
+  letter-spacing: 6px;
+  text-anchor: middle;
+  fill: var(--dourado);
+  stroke: var(--sombra-dourada);
+  stroke-width: 1.2;
+  paint-order: stroke;
+}
+
+.contorno {
+  fill: var(--sombra-dourada);
+  stroke: var(--sombra-dourada);
+  stroke-width: 4;
+}
+
+.ouro {
+  fill: var(--dourado);
+}
+
+.pino {
+  fill: var(--sombra-dourada);
+}
+
+.nome {
+  margin: -6px 0 0;
+  font-family: var(--fonte-letreiro);
+  font-weight: 800;
+  font-size: clamp(72px, min(11vw, 24dvh), 150px);
+  line-height: 0.85;
+  color: var(--dourado);
+  text-shadow: 3px 4px 0 var(--sombra-dourada);
+}
+
+.servicos {
+  margin: clamp(8px, 2.5dvh, 18px) 0 0;
+  font-size: 16px;
+  letter-spacing: 0.4px;
+}
+
+.rodape {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+}
+
+.horarios {
+  margin: 0;
+  width: 236px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--fonte-titulo);
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.dia {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--texto-suave);
+}
+
+.dia.hoje {
+  color: var(--dourado);
+}
+
+dt {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+dd {
+  margin: 0;
+}
+
+.pontilhado {
+  flex: 1;
+  border-bottom: 2px dotted currentcolor;
+  opacity: 0.6;
+}
+
+/* Letreiro de neon: verde aceso quando aberto, vermelho quando fechado. */
+.neon {
+  --tubo: var(--neon-vermelho);
+  --nucleo: #ffe5e0;
+  --brilho: 255 75 62;
+  margin: 0;
+  width: 176px;
+  height: 72px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  border-radius: 40px;
+  border: 3px solid var(--tubo);
+  box-shadow:
+    0 0 14px var(--tubo),
+    0 0 34px rgb(var(--brilho) / 55%),
+    inset 0 0 12px rgb(var(--brilho) / 70%);
+  font-family: var(--fonte-neon);
+  font-size: 40px;
+  line-height: 1;
+  color: var(--nucleo);
+  text-shadow:
+    0 0 8px var(--tubo),
+    0 0 22px var(--tubo);
+}
+
+.neon.aceso {
+  --tubo: var(--neon-verde);
+  --nucleo: #e1ffe0;
+  --brilho: 46 230 107;
+}
+
+@media (max-width: 900px) {
+  .vitrine {
+    padding: 24px 16px;
+  }
+
+  .poste {
+    display: none;
+  }
+
+  .janela {
+    padding: 24px;
+  }
+}
