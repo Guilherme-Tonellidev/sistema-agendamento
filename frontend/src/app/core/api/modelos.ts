@@ -46,10 +46,18 @@ export interface Servico {
   readonly ativo: boolean;
 }
 
+/** Versão curta do serviço, dentro de outras respostas. */
+export type ServicoResumo = Pick<Servico, 'id' | 'nome' | 'duracaoMinutos' | 'preco'>;
+
 export interface Profissional {
   readonly id: string;
   readonly nome: string;
   readonly ativo: boolean;
+}
+
+/** Detalhe do profissional, com os serviços que ele atende. */
+export interface ProfissionalComServicos extends Profissional {
+  readonly servicos: readonly ServicoResumo[];
 }
 
 export interface HorarioLivre {
@@ -65,8 +73,15 @@ export interface Agendamento {
   readonly fim: string;
   readonly preco: number;
   readonly status: StatusAgendamento;
+  readonly canceladoEm: string | null;
+  readonly motivoCancelamento: string | null;
   readonly profissional: Profissional;
-  readonly servico: Pick<Servico, 'id' | 'nome' | 'duracaoMinutos' | 'preco'>;
+  readonly servico: ServicoResumo;
+  readonly cliente: {
+    readonly id: string;
+    readonly nome: string;
+    readonly telefone: string | null;
+  };
 }
 
 export interface NovoAgendamento {
@@ -75,6 +90,25 @@ export interface NovoAgendamento {
   readonly clienteId: string;
   readonly inicio: string;
 }
+
+/** Quem chegou sem reserva, encaixado pelo profissional. */
+export interface NovoEncaixe {
+  readonly profissionalId: string;
+  readonly servicoId: string;
+  readonly inicio: string;
+  readonly nomeDoCliente: string;
+  readonly telefone: string | null;
+}
+
+/** Período em que o profissional não atende (folga, consulta, almoço fora de hora). */
+export interface Bloqueio {
+  readonly id: string;
+  readonly inicio: string;
+  readonly fim: string;
+  readonly motivo: string | null;
+}
+
+export type NovoBloqueio = Omit<Bloqueio, 'id'>;
 
 /** Problem Details (RFC 9457) devolvido pelo TratadorDeErros. */
 export interface Problema {

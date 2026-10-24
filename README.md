@@ -46,9 +46,22 @@ O PostgreSQL do Compose fica na porta **5433** do seu computador, para não disp
 PostgreSQL instalado direto no sistema (dá para trocar com a variável `POSTGRES_PORT`).
 
 Confira em <http://localhost:8080/actuator/health> e veja a documentação da API em
-<http://localhost:8080/swagger-ui.html>. Em desenvolvimento já existe um administrador
-`admin@agendamento.local` / `admin-local-123`: faça login em `/api/auth/login` e cole o token em
-**Authorize**.
+<http://localhost:8080/swagger-ui.html> (faça login em `/api/auth/login` e cole o token em **Authorize**).
+
+### Dados de exemplo
+
+Em desenvolvimento, a primeira subida com o banco ainda sem serviços cadastra 3 serviços (Corte,
+Barba e Corte + barba), 2 barbeiros com jornada (Rafael Souza e Bruno Lima: de segunda a sexta das
+9h às 12h e das 13h às 20h, sábado das 8h às 18h) e estas contas:
+
+| Papel | E-mail | Senha |
+| --- | --- | --- |
+| Administrador | `admin@agendamento.local` | `admin-local-123` |
+| Barbeiro (Rafael) | `rafael@tonelli.local` | `barbeiro-local-123` |
+| Cliente | `carlos@tonelli.local` | `cliente-local-123` |
+
+Em produção nada disso roda; o administrador vem de `ADMIN_EMAIL` e `ADMIN_SENHA`. Na opção 1 o
+banco nasce vazio a cada execução; na opção 2, `docker compose down -v` apaga o banco para recomeçar.
 
 ### Front-end
 
@@ -100,7 +113,7 @@ mais `JWT_SEGREDO` (obrigatório), `ADMIN_EMAIL`, `ADMIN_SENHA` e `CORS_ORIGENS`
 | --- | --- |
 | Visitante | Ver serviços, profissionais (sem e-mail e telefone) e horários livres; criar conta |
 | Cliente | Reservar, ver, cancelar e reagendar os **próprios** agendamentos; editar o próprio cadastro |
-| Profissional | Cuidar da **própria** jornada, bloqueios e agendamentos; concluir atendimentos |
+| Profissional | Cuidar da **própria** jornada, bloqueios e agendamentos; concluir atendimentos e encaixar quem chegou sem reserva |
 | Administrador | Tudo, incluindo catálogo, profissionais e acesso deles |
 
 - **Login:** `POST /api/auth/login` devolve um **token de acesso** (JWT HS256, 15 min) no corpo e um
@@ -123,9 +136,9 @@ mais `JWT_SEGREDO` (obrigatório), `ADMIN_EMAIL`, `ADMIN_SENHA` e `CORS_ORIGENS`
 | Serviços | `POST /api/servicos` · `GET /api/servicos` · `GET/PUT /api/servicos/{id}` · `PATCH /api/servicos/{id}/ativar` e `/inativar` |
 | Profissionais | `POST /api/profissionais` · `GET /api/profissionais` · `GET/PUT /api/profissionais/{id}` · `PUT /api/profissionais/{id}/servicos` · `PATCH .../ativar` e `/inativar` |
 | Clientes | `POST /api/clientes` · `GET /api/clientes` · `GET/PUT /api/clientes/{id}` |
-| Disponibilidade | `GET/PUT /api/profissionais/{id}/jornada` · `POST/GET /api/profissionais/{id}/bloqueios` · `DELETE .../bloqueios/{bloqueioId}` · `GET /api/profissionais/{id}/horarios-livres?servicoId=&data=` |
+| Disponibilidade | `GET/PUT /api/profissionais/{id}/jornada` · `POST/GET /api/profissionais/{id}/bloqueios` · `DELETE .../bloqueios/{bloqueioId}` · `GET /api/profissionais/{id}/horarios-livres?servicoId=&data=` · `GET .../horarios-livres/encaixe` |
 | Autenticação | `POST /api/auth/cadastro` · `POST /api/auth/login` · `POST /api/auth/refresh` · `POST /api/auth/logout` · `GET /api/auth/eu` |
-| Agendamentos | `POST /api/agendamentos` · `GET /api/agendamentos` · `GET /api/agendamentos/{id}` · `PATCH .../{id}/cancelar`, `/reagendar`, `/concluir` e `/nao-compareceu` |
+| Agendamentos | `POST /api/agendamentos` · `POST /api/agendamentos/encaixe` · `GET /api/agendamentos` · `GET /api/agendamentos/{id}` · `PATCH .../{id}/cancelar`, `/reagendar`, `/concluir` e `/nao-compareceu` |
 
 As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
 (`page`, `size`, `sort`).
@@ -141,6 +154,8 @@ As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate
 4. Bloquear um período que já tem reservas também recebe `409`, com a lista dos agendamentos
    afetados: o profissional cancela ou remarca antes, e nenhum cliente perde o horário sem aviso.
 5. Inativar um profissional ou serviço impede novas reservas, mas mantém as que já existem.
+6. Quem chega sem reserva é encaixado pelo barbeiro só com o nome (e, se quiser, o telefone): sem
+   antecedência mínima, mas com as mesmas regras de jornada, bloqueio e conflito.
 
 ### Configuração
 
@@ -151,6 +166,7 @@ As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate
 | `agendamento.janela-de-reserva` | `P90D` | Até quanto tempo à frente é possível reservar |
 | `agendamento.antecedencia-minima-reserva` | `PT1H30M` | Prazo mínimo entre a reserva e o início do horário |
 | `agendamento.antecedencia-minima-cancelamento` | `PT2H` | Prazo mínimo para o cliente cancelar ou reagendar |
+| `agendamento.dados-de-exemplo` | `false` (`true` no perfil `local`) | Cadastra os [dados de exemplo](#dados-de-exemplo) num banco sem serviços |
 
 Todas podem vir de variáveis de ambiente (ex.: `AGENDAMENTO_FUSO_HORARIO`).
 Os erros seguem o padrão Problem Details (RFC 9457):
@@ -203,12 +219,12 @@ Os erros seguem o padrão Problem Details (RFC 9457):
 - [x] **3. Reserva:** criação, cancelamento, reagendamento e conflito de horários
 - [x] **4. Segurança:** JWT com papéis, refresh token com rotação e regras por dono
 - [ ] **4b. Login com Google**
-- [ ] **5. Angular:** base, login e rotas protegidas *(em andamento)*
-- [ ] **6. Fluxo de reserva no front-end** com FullCalendar
+- [x] **5. Angular:** base, login e rotas protegidas
+- [x] **6. Telas do front-end:** serviços, minhas reservas e agenda do barbeiro com encaixe e bloqueio
 - [ ] **7. RabbitMQ:** eventos e e-mails de confirmação
 - [ ] **8. Quartz:** lembretes 24h antes
 - [ ] **9. Redis:** cache de horários e limite de tentativas de login
-- [ ] **10. Painel do administrador** e histórico com Hibernate Envers
+- [ ] **10. Painel do administrador:** visão da semana com FullCalendar e histórico com Hibernate Envers
 - [ ] **11. Deploy** com link público
 
 ## Autor

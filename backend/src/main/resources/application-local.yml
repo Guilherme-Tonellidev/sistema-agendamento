@@ -14,3 +14,7 @@ seguranca:
   admin-senha: admin-local-123
   # Em http://localhost o navegador aceita o cookie Secure, mas ferramentas como o Postman não.
   cookie-seguro: false
+
+agendamento:
+  # Com o banco ainda sem serviços, a primeira subida cadastra serviços, barbeiros e as contas de exemplo do README.
+  dados-de-exemplo: true

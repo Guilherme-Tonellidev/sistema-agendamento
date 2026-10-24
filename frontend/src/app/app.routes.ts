@@ -2,8 +2,6 @@ import { Routes } from '@angular/router';
 
 import { exigePapel, somenteVisitante } from './core/autenticacao/guardas';
 
-const emBreve = () => import('./paginas/em-breve/em-breve').then((m) => m.EmBreve);
-
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'horarios' },
   {
@@ -26,22 +24,19 @@ export const routes: Routes = [
   {
     path: 'servicos',
     title: 'Serviços — Barbearia Tonelli',
-    data: { titulo: 'Serviços' },
-    loadComponent: emBreve,
+    loadComponent: () => import('./paginas/servicos/servicos').then((m) => m.Servicos),
   },
   {
     path: 'minhas-reservas',
     title: 'Minhas reservas — Barbearia Tonelli',
-    data: { titulo: 'Minhas reservas' },
     canActivate: [exigePapel('CLIENTE')],
-    loadComponent: emBreve,
+    loadComponent: () => import('./paginas/reservas/reservas').then((m) => m.Reservas),
   },
   {
     path: 'agenda',
-    title: 'Minha agenda — Barbearia Tonelli',
-    data: { titulo: 'Minha agenda' },
+    title: 'Agenda — Barbearia Tonelli',
     canActivate: [exigePapel('PROFISSIONAL', 'ADMIN')],
-    loadComponent: emBreve,
+    loadComponent: () => import('./paginas/agenda/agenda').then((m) => m.Agenda),
   },
   { path: '**', redirectTo: '' },
 ];

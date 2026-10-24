@@ -1,0 +1,41 @@
+<app-cabecalho />
+
+<main class="pagina">
+  <section class="quadro" aria-labelledby="titulo-tabela">
+    <h1 id="titulo-tabela">Tabela de preços</h1>
+
+    @if (catalogo.error()) {
+      <p class="aviso" role="alert">
+        Não foi possível carregar a tabela.
+        <button type="button" class="link" (click)="catalogo.reload()">Tentar de novo</button>
+      </p>
+    } @else if (catalogo.isLoading()) {
+      <p class="aviso">Carregando a tabela…</p>
+    } @else {
+      <ul>
+        @for (servico of servicos(); track servico.id) {
+          <li>
+            <span class="nome">{{ servico.nome }}</span>
+            <span class="pontilhado" aria-hidden="true"></span>
+            <span class="duracao">{{ servico.duracaoMinutos | duracao }}</span>
+            <span class="preco">{{ servico.preco | preco }}</span>
+            <a
+              routerLink="/horarios"
+              [queryParams]="{ servico: servico.id }"
+              [attr.aria-label]="'Agendar ' + servico.nome"
+            >
+              Agendar
+            </a>
+          </li>
+        } @empty {
+          <li class="aviso">Nenhum serviço disponível no momento.</li>
+        }
+      </ul>
+    }
+  </section>
+
+  <div class="rodape">
+    <p>{{ funcionamento }}</p>
+    <a routerLink="/horarios" class="botao primario">Ver horários livres</a>
+  </div>
+</main>

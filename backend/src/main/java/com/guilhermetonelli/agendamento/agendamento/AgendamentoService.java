@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoFiltro;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoResponse;
+import com.guilhermetonelli.agendamento.agendamento.dto.EncaixeRequest;
 import com.guilhermetonelli.agendamento.agendamento.dto.ReagendamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCancelado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
@@ -92,25 +93,27 @@ public class AgendamentoService {
         this.clock = clock;
     }
 
-    /**
-     * A trava no profissional serializa reservas, bloqueios e mudanças de jornada da mesma agenda: a checagem
-     * de disponibilidade e a gravação acontecem sem ninguém mudar a agenda no meio.
-     */
     @Transactional
     public AgendamentoResponse reservar(AgendamentoRequest request, UsuarioLogado eu) {
         if (!eu.participaDe(request.profissionalId(), request.clienteId())) {
             throw new AccessDeniedException("Clientes reservam só para si; profissionais, só na própria agenda.");
         }
         Profissional profissional = profissionalService.obterComTrava(request.profissionalId());
-        Servico servico = servicoService.obter(request.servicoId());
         Cliente cliente = clienteService.obter(request.clienteId());
-        Periodo horario = disponibilidadeService.garantirHorarioNaAgenda(profissional, servico, request.inicio());
-        garantirSemConflito(profissional.getId(), cliente.getId(), horario, Specification.unrestricted());
+        return marcar(
+                profissional, request.servicoId(), cliente, request.inicio(), properties.antecedenciaMinimaReserva());
+    }
 
-        Agendamento agendamento = salvar(new Agendamento(profissional, servico, cliente, horario));
-        eventos.publishEvent(new AgendamentoCriado(
-                agendamento.getId(), profissional.getId(), cliente.getId(), horario.inicio(), horario.fim()));
-        return mapper.paraResponse(agendamento);
+    /**
+     * Quem chegou sem reserva entra na agenda cadastrado só com o nome. Sem antecedência mínima: ela protege o
+     * profissional de reservas em cima da hora, e aqui é ele mesmo (ou o administrador) quem marca.
+     */
+    @Transactional
+    public AgendamentoResponse encaixar(EncaixeRequest request, UsuarioLogado eu) {
+        eu.garantirAgendaDe(request.profissionalId());
+        Profissional profissional = profissionalService.obterComTrava(request.profissionalId());
+        Cliente cliente = clienteService.cadastrarSemConta(request.nomeDoCliente(), request.telefone());
+        return marcar(profissional, request.servicoId(), cliente, request.inicio(), Duration.ZERO);
     }
 
     public Page<AgendamentoResponse> listar(AgendamentoFiltro pedido, Pageable pageable, UsuarioLogado eu) {
@@ -149,7 +152,10 @@ public class AgendamentoService {
         agendamento.garantirQuePodeReagendar(agora, antecedencia);
 
         Periodo horario = disponibilidadeService.garantirHorarioNaAgenda(
-                agendamento.getProfissional(), agendamento.getServico(), request.inicio());
+                agendamento.getProfissional(),
+                agendamento.getServico(),
+                request.inicio(),
+                properties.antecedenciaMinimaReserva());
         garantirSemConflito(
                 profissionalId(agendamento), clienteId(agendamento), horario, AgendamentoSpecifications.exceto(id));
 
@@ -172,6 +178,22 @@ public class AgendamentoService {
     public AgendamentoResponse registrarFalta(UUID id, UsuarioLogado eu) {
         Agendamento agendamento = obterParaEncerrar(id, eu);
         agendamento.registrarFalta(Instant.now(clock));
+        return mapper.paraResponse(agendamento);
+    }
+
+    /**
+     * Quem chama já pegou a trava no profissional: ela serializa reservas, bloqueios e mudanças de jornada da
+     * mesma agenda, então a checagem de disponibilidade e a gravação acontecem sem ninguém mudar a agenda no meio.
+     */
+    private AgendamentoResponse marcar(
+            Profissional profissional, UUID servicoId, Cliente cliente, Instant inicio, Duration antecedencia) {
+        Servico servico = servicoService.obter(servicoId);
+        Periodo horario = disponibilidadeService.garantirHorarioNaAgenda(profissional, servico, inicio, antecedencia);
+        garantirSemConflito(profissional.getId(), cliente.getId(), horario, Specification.unrestricted());
+
+        Agendamento agendamento = salvar(new Agendamento(profissional, servico, cliente, horario));
+        eventos.publishEvent(new AgendamentoCriado(
+                agendamento.getId(), profissional.getId(), cliente.getId(), horario.inicio(), horario.fim()));
         return mapper.paraResponse(agendamento);
     }
 

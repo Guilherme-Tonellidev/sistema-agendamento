@@ -1,0 +1,134 @@
+<app-cabecalho />
+
+<main class="pagina">
+  <div class="topo">
+    <h1>Minhas reservas</h1>
+    <a routerLink="/horarios" class="botao primario">Nova reserva</a>
+  </div>
+
+  @if (lista.error()) {
+    <p class="aviso" role="alert">
+      Não foi possível carregar suas reservas.
+      <button type="button" class="link" (click)="lista.reload()">Tentar de novo</button>
+    </p>
+  } @else if (lista.isLoading() && !lista.hasValue()) {
+    <p class="aviso">Carregando suas reservas…</p>
+  } @else {
+    <section aria-labelledby="titulo-proximas">
+      <h2 id="titulo-proximas">Próximas</h2>
+      <div class="cartoes">
+        @for (cartao of cartoes(); track cartao.reserva.id) {
+          @let reserva = cartao.reserva;
+          <app-ingresso [class.hoje]="cartao.hoje" role="article" [attr.aria-label]="cartao.dia">
+            <div topo class="quando">
+              <div class="data">
+                <span class="dia">{{ cartao.dia }}</span>
+                <span class="hora">{{ cartao.hora }}</span>
+              </div>
+              <span class="ate">até {{ cartao.fim }}</span>
+            </div>
+
+            <p>
+              <strong>{{ reserva.servico.nome }}</strong> com {{ reserva.profissional.nome }}
+            </p>
+
+            @if (confirmando() === reserva.id) {
+              <p class="nota">Cancelar esta reserva? O horário volta a ficar livre.</p>
+              @if (erroAoCancelar(); as erro) {
+                <p class="erro" role="alert">{{ erro }}</p>
+              }
+              <div class="acoes">
+                <button type="button" class="botao secundario" (click)="pedirCancelamento(null)">
+                  Voltar
+                </button>
+                <button
+                  type="button"
+                  class="botao escuro"
+                  [disabled]="cancelando()"
+                  (click)="cancelar(reserva)"
+                >
+                  {{ cancelando() ? 'Cancelando…' : 'Sim, cancelar' }}
+                </button>
+              </div>
+            } @else {
+              <p class="nota">
+                @if (cartao.podeMudar) {
+                  Cancelamento sem custo até {{ cartao.limite }}.
+                } @else {
+                  Faltam menos de {{ prazo }} horas: para mudar, fale com a barbearia.
+                }
+              </p>
+              <div class="acoes">
+                <button
+                  type="button"
+                  class="botao secundario"
+                  [disabled]="!cartao.podeMudar"
+                  (click)="pedirCancelamento(reserva.id)"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  class="botao escuro"
+                  [disabled]="!cartao.podeMudar"
+                  (click)="remarcar(reserva)"
+                >
+                  Remarcar
+                </button>
+              </div>
+            }
+          </app-ingresso>
+        } @empty {
+          <p class="aviso">
+            Nenhuma reserva marcada. <a routerLink="/horarios">Escolher um horário</a>
+          </p>
+        }
+      </div>
+    </section>
+
+    @if (historico().length) {
+      <section aria-labelledby="titulo-historico">
+        <h2 id="titulo-historico">Histórico</h2>
+        <ul class="historico">
+          @for (linha of historico(); track linha.reserva.id) {
+            @let reserva = linha.reserva;
+            <li>
+              <span class="quando-foi">{{ linha.dia }}</span>
+              <span class="hora-curta">{{ linha.hora }}</span>
+              <span class="o-que">
+                {{ reserva.servico.nome }} com {{ reserva.profissional.nome }}
+              </span>
+              <span class="situacao" [attr.data-status]="reserva.status">{{ linha.situacao }}</span>
+              <a
+                class="de-novo"
+                routerLink="/horarios"
+                [queryParams]="{ servico: reserva.servico.id, barbeiro: reserva.profissional.id }"
+                [attr.aria-label]="
+                  'Agendar de novo: ' + reserva.servico.nome + ' com ' + reserva.profissional.nome
+                "
+              >
+                <svg
+                  aria-hidden="true"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M3 12a9 9 0 0 1 15.5-6.2L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-15.5 6.2L3 16" />
+                  <path d="M3 21v-5h5" />
+                </svg>
+                Agendar de novo
+              </a>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</main>

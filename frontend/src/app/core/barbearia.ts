@@ -25,6 +25,14 @@ const POR_DIA_DA_SEMANA: readonly Expediente[] = [
   SABADO,
 ];
 
+/** Até quanto tempo antes do horário o cliente cancela ou remarca sozinho (regra do back-end). */
+export const PRAZO_PARA_MUDAR_EM_HORAS = 2;
+
+/** "9h às 20h", ou "fechado". */
+export function horarioDe({ abre, fecha }: Expediente): string {
+  return abre === null ? 'fechado' : `${abre}h às ${fecha}h`;
+}
+
 /** O expediente do dia (AAAA-MM-DD). */
 export function expedienteDo(data: string): Expediente {
   return POR_DIA_DA_SEMANA[diaDaSemana(data)];
@@ -35,6 +43,11 @@ export function abertaEm(instante: Date): boolean {
   const { abre, fecha } = expedienteDo(dataNoFuso(instante));
   const minutos = minutosNoFuso(instante);
   return abre !== null && fecha !== null && minutos >= abre * 60 && minutos < fecha * 60;
+}
+
+/** Último instante em que o cliente ainda cancela ou remarca sozinho essa reserva. */
+export function limiteParaMudar(inicio: string): Date {
+  return new Date(new Date(inicio).getTime() - PRAZO_PARA_MUDAR_EM_HORAS * 60 * 60 * 1000);
 }
 
 /** Se ainda dá para marcar nesse dia: a casa abre nele e, sendo hoje, ainda não fechou. */

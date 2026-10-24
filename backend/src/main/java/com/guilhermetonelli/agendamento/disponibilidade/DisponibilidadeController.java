@@ -96,4 +96,15 @@ class DisponibilidadeController {
             @Parameter(description = "Dia no fuso do negócio", example = "2026-10-21") @RequestParam LocalDate data) {
         return disponibilidadeService.horariosLivres(id, servicoId, data);
     }
+
+    @GetMapping("/horarios-livres/encaixe")
+    @Operation(summary = "Horários livres a partir de agora, para encaixar quem chegou sem reserva (profissional ou administrador)")
+    List<HorarioLivreResponse> horariosParaEncaixe(
+            @PathVariable UUID id,
+            @RequestParam UUID servicoId,
+            @Parameter(description = "Dia no fuso do negócio", example = "2026-10-21") @RequestParam LocalDate data,
+            @AuthenticationPrincipal UsuarioLogado eu) {
+        eu.garantirAgendaDe(id);
+        return disponibilidadeService.horariosParaEncaixe(id, servicoId, data);
+    }
 }

@@ -1,0 +1,70 @@
+@let horas = periodo().value();
+@let acao = 'Bloquear das ' + horas.inicio + ' às ' + horas.fim;
+<app-ingresso role="region" aria-label="Bloqueio de horário">
+  <div topo>
+    <p class="rotulo">Bloquear horário</p>
+    <p class="hora-grande">{{ horas.inicio || '--:--' }}</p>
+    <p class="suave">até {{ horas.fim || '--:--' }}, sem atendimento</p>
+  </div>
+
+  <form [formRoot]="periodo">
+    <div class="campos-lado-a-lado">
+      <div class="campo">
+        @let inicio = periodo.inicio();
+        <label for="inicio-bloqueio">Das</label>
+        <input
+          id="inicio-bloqueio"
+          type="time"
+          step="900"
+          [formField]="periodo.inicio"
+          [attr.aria-invalid]="inicio.touched() && inicio.invalid()"
+          aria-describedby="inicio-bloqueio-erro"
+        />
+        @if (inicio.touched() && inicio.errors()[0]; as erro) {
+          <p class="erro-campo" id="inicio-bloqueio-erro">{{ erro.message }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        @let fim = periodo.fim();
+        <label for="fim-bloqueio">Até</label>
+        <input
+          id="fim-bloqueio"
+          type="time"
+          step="900"
+          [formField]="periodo.fim"
+          [attr.aria-invalid]="fim.touched() && fim.invalid()"
+          aria-describedby="fim-bloqueio-erro"
+        />
+        @if (fim.touched() && fim.errors()[0]; as erro) {
+          <p class="erro-campo" id="fim-bloqueio-erro">{{ erro.message }}</p>
+        }
+      </div>
+    </div>
+
+    <div class="campo">
+      @let motivo = periodo.motivo();
+      <label for="motivo-bloqueio">Motivo <span class="opcional">(só você vê)</span></label>
+      <input
+        id="motivo-bloqueio"
+        autocomplete="off"
+        placeholder="Almoço, consulta, folga…"
+        [formField]="periodo.motivo"
+        [attr.aria-invalid]="motivo.touched() && motivo.invalid()"
+        aria-describedby="motivo-bloqueio-erro"
+      />
+      @if (motivo.touched() && motivo.errors()[0]; as erro) {
+        <p class="erro-campo" id="motivo-bloqueio-erro">{{ erro.message }}</p>
+      }
+    </div>
+
+    @if (periodo().errors()[0]; as erro) {
+      <p class="erro" role="alert">{{ erro.message }}</p>
+    }
+
+    <button type="submit" class="botao primario" [disabled]="periodo().submitting()">
+      {{ periodo().submitting() ? 'Bloqueando…' : acao }}
+    </button>
+    <button type="button" class="botao secundario" (click)="voltar.emit()">Voltar</button>
+  </form>
+</app-ingresso>

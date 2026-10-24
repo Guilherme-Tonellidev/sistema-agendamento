@@ -59,38 +59,25 @@ public class DisponibilidadeService {
     }
 
     public List<HorarioLivreResponse> horariosLivres(UUID profissionalId, UUID servicoId, LocalDate data) {
-        Profissional profissional = profissionalService.obterComServicos(profissionalId);
-        Servico servico = servicoService.obter(servicoId);
-        garantirQuePodeAtender(profissional, servico);
+        return horariosLivres(profissionalId, servicoId, data, properties.antecedenciaMinimaReserva());
+    }
 
-        Instant agora = Instant.now(clock);
-        LocalDate hoje = hoje(agora);
-        if (data.isBefore(hoje)) {
-            return List.of();
-        }
-        garantirDentroDaJanela(data, hoje);
-
-        Periodo dia = Periodo.doDia(data, properties.fusoHorario());
-        List<Periodo> ocupados = Stream.concat(
-                        bloqueioService.bloqueados(profissionalId, dia).stream(),
-                        agendamentosAtivos.doProfissional(profissionalId, dia).stream().map(AgendamentoAtivo::horario))
-                .toList();
-        return livres(profissional, servico, data, ocupados, inicioMinimo(agora)).stream()
-                .map(mapper::paraResponse)
-                .toList();
+    /** Para encaixar quem chegou sem reserva: os horários começam agora, sem antecedência mínima. */
+    public List<HorarioLivreResponse> horariosParaEncaixe(UUID profissionalId, UUID servicoId, LocalDate data) {
+        return horariosLivres(profissionalId, servicoId, data, Duration.ZERO);
     }
 
     /**
      * Garante que o horário que começa em {@code inicio} apareceria nos horários livres, desconsiderando os
      * agendamentos (quem reserva confere os conflitos, inclusive os do cliente). Devolve o horário completo.
      */
-    public Periodo garantirHorarioNaAgenda(Profissional profissional, Servico servico, Instant inicio) {
+    public Periodo garantirHorarioNaAgenda(
+            Profissional profissional, Servico servico, Instant inicio, Duration antecedencia) {
         garantirQuePodeAtender(profissional, servico);
         Instant agora = Instant.now(clock);
-        if (inicio.isBefore(inicioMinimo(agora))) {
+        if (inicio.isBefore(agora.plus(antecedencia))) {
             throw new RegraDeNegocioException(inicio.isAfter(agora)
-                    ? "Reservas precisam de pelo menos %s de antecedência."
-                            .formatted(Textos.duracao(properties.antecedenciaMinimaReserva()))
+                    ? "Reservas precisam de pelo menos %s de antecedência.".formatted(Textos.duracao(antecedencia))
                     : "O horário escolhido já passou.");
         }
         LocalDate data = LocalDate.ofInstant(inicio, properties.fusoHorario());
@@ -109,14 +96,33 @@ public class DisponibilidadeService {
         return horario;
     }
 
+    private List<HorarioLivreResponse> horariosLivres(
+            UUID profissionalId, UUID servicoId, LocalDate data, Duration antecedencia) {
+        Profissional profissional = profissionalService.obterComServicos(profissionalId);
+        Servico servico = servicoService.obter(servicoId);
+        garantirQuePodeAtender(profissional, servico);
+
+        Instant agora = Instant.now(clock);
+        LocalDate hoje = hoje(agora);
+        if (data.isBefore(hoje)) {
+            return List.of();
+        }
+        garantirDentroDaJanela(data, hoje);
+
+        Periodo dia = Periodo.doDia(data, properties.fusoHorario());
+        List<Periodo> ocupados = Stream.concat(
+                        bloqueioService.bloqueados(profissionalId, dia).stream(),
+                        agendamentosAtivos.doProfissional(profissionalId, dia).stream().map(AgendamentoAtivo::horario))
+                .toList();
+        return livres(profissional, servico, data, ocupados, agora.plus(antecedencia)).stream()
+                .map(mapper::paraResponse)
+                .toList();
+    }
+
     private List<Periodo> livres(
             Profissional profissional, Servico servico, LocalDate data, List<Periodo> ocupados, Instant inicioMinimo) {
         return calculadora.horariosLivres(
                 data, jornadaService.doProfissional(profissional.getId()), duracao(servico), ocupados, inicioMinimo);
-    }
-
-    private Instant inicioMinimo(Instant agora) {
-        return agora.plus(properties.antecedenciaMinimaReserva());
     }
 
     private static Duration duracao(Servico servico) {

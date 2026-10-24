@@ -33,6 +33,7 @@ import com.guilhermetonelli.agendamento.Pagina;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoResponse;
 import com.guilhermetonelli.agendamento.agendamento.dto.CancelamentoRequest;
+import com.guilhermetonelli.agendamento.agendamento.dto.EncaixeRequest;
 import com.guilhermetonelli.agendamento.agendamento.dto.ReagendamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCancelado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
@@ -140,6 +141,67 @@ class AgendamentoApiTest extends IntegracaoTest {
 
         assertThat(reservar(ana, carlos, AS_8H)).satisfies(regraDeNegocio("pelo menos 1h30 de antecedência"));
         assertThat(reservar(ana, carlos, AS_8H15).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    void encaixaQuemChegouSemReservaSemAntecedenciaMinima() {
+        relogio.ajustar(Instant.parse("2026-10-21T10:50:00Z"));
+        api = apiComo(comoProfissional(ana));
+
+        var resposta = encaixar(ana, AS_8H, "  Júlia Prado ", "14998123344");
+        AgendamentoResponse agendamento = buscar(id(resposta));
+
+        assertThat(resposta.getHeaders().getLocation()).hasPath("/api/agendamentos/" + agendamento.id());
+        assertThat(agendamento.inicio()).isEqualTo(Instant.parse(AS_8H));
+        assertThat(agendamento.cliente())
+                .isEqualTo(new ClienteResponse(agendamento.cliente().id(), "Júlia Prado", null, "14998123344"));
+        assertThat(eventos.todos()).containsExactly(new AgendamentoCriado(
+                agendamento.id(), ana, agendamento.cliente().id(), Instant.parse(AS_8H), Instant.parse(AS_8H30)));
+    }
+
+    @Test
+    void horariosParaEncaixeComecamAgora() {
+        relogio.ajustar(Instant.parse("2026-10-21T10:50:00Z"));
+        api = apiComo(comoProfissional(ana));
+
+        List<String> paraEncaixe = JsonPath.read(horariosParaEncaixe(ana).getBody(), "$[*].inicio");
+
+        assertThat(paraEncaixe).first().isEqualTo(AS_8H);
+        assertThat(horariosLivres(ana)).extracting(HorarioLivreResponse::inicio)
+                .first().isEqualTo(Instant.parse("2026-10-21T12:30:00Z"));
+    }
+
+    @Test
+    void soQuemCuidaDaAgendaEncaixa() {
+        api = apiAnonima();
+        var anonimo = List.of(encaixar(ana, AS_8H, "Júlia Prado", null), horariosParaEncaixe(ana));
+        api = apiComo(comoCliente(carlos));
+        var doCliente = List.of(encaixar(ana, AS_8H, "Júlia Prado", null), horariosParaEncaixe(ana));
+        api = apiComo(comoProfissional(bruno));
+        var deOutraAgenda = List.of(encaixar(ana, AS_8H, "Júlia Prado", null), horariosParaEncaixe(ana));
+
+        assertThat(anonimo).extracting(ResponseEntity::getStatusCode).containsOnly(HttpStatus.UNAUTHORIZED);
+        assertThat(doCliente).extracting(ResponseEntity::getStatusCode).containsOnly(HttpStatus.FORBIDDEN);
+        assertThat(deOutraAgenda).extracting(ResponseEntity::getStatusCode).containsOnly(HttpStatus.FORBIDDEN);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM cliente", Integer.class)).isEqualTo(2);
+    }
+
+    @Test
+    void encaixeSegueAsRegrasDaAgendaSemDeixarClienteSolto() {
+        reservar(ana, carlos, AS_8H);
+        relogio.ajustar(Instant.parse("2026-10-21T11:10:00Z"));
+        api = apiComo(comoProfissional(ana));
+
+        assertThat(encaixar(ana, AS_8H, "Júlia Prado", null)).satisfies(regraDeNegocio("já passou"));
+        assertThat(encaixar(ana, AS_8H15, "Júlia Prado", null)).satisfies(conflito("o profissional já tem"));
+        assertThat(encaixar(ana, "2026-10-21T11:20:00Z", "Júlia Prado", null)).satisfies(regraDeNegocio("a cada 15"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM cliente", Integer.class)).isEqualTo(2);
+
+        var invalido = encaixar(ana, AS_8H30, " ", "1499");
+
+        assertThat(invalido.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(JsonPath.<List<String>>read(invalido.getBody(), "$.erros[*].campo"))
+                .containsExactly("nomeDoCliente", "telefone");
     }
 
     @Test
@@ -499,6 +561,21 @@ class AgendamentoApiTest extends IntegracaoTest {
         return api.post().uri("/api/agendamentos")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new AgendamentoRequest(profissional, servico, cliente, Instant.parse(inicio)))
+                .retrieve()
+                .toEntity(String.class);
+    }
+
+    private ResponseEntity<String> encaixar(UUID profissional, String inicio, String nome, String telefone) {
+        return api.post().uri("/api/agendamentos/encaixe")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new EncaixeRequest(profissional, corte, Instant.parse(inicio), nome, telefone))
+                .retrieve()
+                .toEntity(String.class);
+    }
+
+    private ResponseEntity<String> horariosParaEncaixe(UUID profissional) {
+        return api.get()
+                .uri("/api/profissionais/{id}/horarios-livres/encaixe?servicoId={s}&data=2026-10-21", profissional, corte)
                 .retrieve()
                 .toEntity(String.class);
     }

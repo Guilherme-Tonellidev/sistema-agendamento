@@ -36,6 +36,12 @@ public class ClienteService {
         return mapper.paraResponse(repository.save(cliente));
     }
 
+    /** Para o encaixe de quem chegou sem reserva. */
+    @Transactional
+    public Cliente cadastrarSemConta(String nome, String telefone) {
+        return repository.save(Cliente.semConta(nome, telefone));
+    }
+
     public Page<ClienteResponse> listar(ClienteFiltro filtro, Pageable pageable) {
         return repository.findAll(ClienteSpecifications.de(filtro), pageable).map(mapper::paraResponse);
     }

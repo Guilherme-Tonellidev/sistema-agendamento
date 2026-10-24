@@ -23,6 +23,7 @@ import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoFiltro;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoResponse;
 import com.guilhermetonelli.agendamento.agendamento.dto.CancelamentoRequest;
+import com.guilhermetonelli.agendamento.agendamento.dto.EncaixeRequest;
 import com.guilhermetonelli.agendamento.agendamento.dto.ReagendamentoRequest;
 import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
 
@@ -47,9 +48,16 @@ class AgendamentoController {
             @Valid @RequestBody AgendamentoRequest request,
             @AuthenticationPrincipal UsuarioLogado eu,
             UriComponentsBuilder uri) {
-        AgendamentoResponse criado = service.reservar(request, eu);
-        var local = uri.path("/api/agendamentos/{id}").buildAndExpand(criado.id()).toUri();
-        return ResponseEntity.created(local).body(criado);
+        return criado(service.reservar(request, eu), uri);
+    }
+
+    @PostMapping("/encaixe")
+    @Operation(summary = "Encaixa quem chegou sem reserva, sem antecedência mínima (profissional ou administrador)")
+    ResponseEntity<AgendamentoResponse> encaixar(
+            @Valid @RequestBody EncaixeRequest request,
+            @AuthenticationPrincipal UsuarioLogado eu,
+            UriComponentsBuilder uri) {
+        return criado(service.encaixar(request, eu), uri);
     }
 
     @GetMapping
@@ -93,5 +101,11 @@ class AgendamentoController {
     @Operation(summary = "Registra que o cliente não compareceu (profissional ou administrador)")
     AgendamentoResponse naoCompareceu(@PathVariable UUID id, @AuthenticationPrincipal UsuarioLogado eu) {
         return service.registrarFalta(id, eu);
+    }
+
+    private static ResponseEntity<AgendamentoResponse> criado(
+            AgendamentoResponse agendamento, UriComponentsBuilder uri) {
+        var local = uri.path("/api/agendamentos/{id}").buildAndExpand(agendamento.id()).toUri();
+        return ResponseEntity.created(local).body(agendamento);
     }
 }

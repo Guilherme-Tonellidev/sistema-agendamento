@@ -100,6 +100,13 @@ button {
   font-size: 16px;
 }
 
+/* Ação firme no papel creme, como confirmar um cancelamento. */
+.botao.escuro {
+  border: 1.5px solid var(--tinta);
+  background: var(--tinta);
+  color: var(--creme);
+}
+
 .botao:disabled {
   opacity: 0.6;
   cursor: not-allowed;

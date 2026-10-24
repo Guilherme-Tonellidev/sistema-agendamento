@@ -1,0 +1,161 @@
+/* Os três painéis do ticket da agenda: atendimento, encaixe e bloqueio. */
+:host {
+  display: block;
+}
+
+.rotulo {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.hora-grande {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-weight: 800;
+  font-size: 80px;
+  line-height: 0.85;
+}
+
+.suave,
+dt,
+.nota {
+  color: var(--texto-escuro-suave);
+}
+
+[topo] p:last-child {
+  margin: 0;
+  font-size: 15px;
+}
+
+dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 18px;
+  font-size: 15px;
+}
+
+dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.nota {
+  margin: 0;
+  font-size: 14px;
+}
+
+form,
+.acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.acoes.lado-a-lado {
+  flex-direction: row;
+}
+
+.acoes.lado-a-lado .botao {
+  flex: 1;
+}
+
+.botao {
+  min-height: 46px;
+  font-size: 16px;
+}
+
+.botao svg {
+  margin-right: 8px;
+}
+
+.botao:disabled {
+  cursor: progress;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.campos-lado-a-lado {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+label,
+.titulo-campo {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.opcional {
+  font-weight: 400;
+  color: var(--texto-escuro-suave);
+}
+
+input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 2px solid var(--tinta);
+  border-radius: 12px;
+  background: var(--creme-claro);
+  padding: 0 14px;
+  font-size: 16px;
+  color: var(--tinta);
+}
+
+input[type='time'] {
+  padding: 0 10px;
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--erro);
+}
+
+.erro-campo {
+  margin: 0;
+  font-size: 14px;
+  color: var(--erro);
+}
+
+.opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.opcoes.grade {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.opcao {
+  min-height: 40px;
+  border: 1.5px solid var(--tinta);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tinta);
+  padding: 0 12px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.grade .opcao {
+  border-radius: 10px;
+  padding: 0;
+}
+
+.opcao[aria-checked='true'] {
+  background: var(--dourado-botao);
+}
+
+:focus-visible {
+  outline-color: var(--tinta);
+}

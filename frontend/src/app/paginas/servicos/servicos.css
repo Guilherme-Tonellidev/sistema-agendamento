@@ -1,0 +1,145 @@
+/* Espaços e tamanhos acompanham a altura da tela: num notebook, a tabela cabe sem rolar. */
+.pagina {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 3.5dvh, 28px);
+  padding: clamp(14px, 5dvh, 40px) clamp(16px, 4vw, 56px) clamp(16px, 6dvh, 56px);
+}
+
+/* Vidro com moldura de latão, como a vitrine da entrada. */
+.quadro {
+  width: min(900px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 3.5dvh, 28px);
+  padding: clamp(18px, 4.5dvh, 36px) clamp(20px, 6vw, 64px) clamp(20px, 5dvh, 42px);
+  border: 12px solid var(--moldura);
+  outline: 2px solid var(--latao);
+  outline-offset: -8px;
+  border-radius: 4px;
+  background-color: var(--vidro);
+}
+
+h1 {
+  margin: 0;
+  text-align: center;
+  font-family: var(--fonte-letreiro);
+  font-weight: 800;
+  font-size: clamp(44px, min(8vw, 11dvh), 72px);
+  line-height: 0.9;
+  color: var(--dourado);
+  text-shadow: 3px 4px 0 var(--sombra-dourada);
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.8dvh, 14px);
+}
+
+li {
+  display: grid;
+  grid-template-columns: auto minmax(24px, 1fr) 70px 96px 92px;
+  align-items: baseline;
+  column-gap: 14px;
+}
+
+.nome,
+.preco {
+  font-family: var(--fonte-titulo);
+  font-size: clamp(26px, 5.5dvh, 34px);
+  line-height: 1;
+}
+
+.nome {
+  font-weight: 700;
+}
+
+.preco {
+  font-weight: 800;
+  color: var(--dourado);
+  text-align: right;
+}
+
+.pontilhado {
+  border-bottom: 2px dotted var(--cinza);
+}
+
+.duracao {
+  font-size: 15px;
+  color: var(--texto-suave);
+}
+
+li a {
+  justify-self: end;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.aviso {
+  display: block;
+  margin: 0;
+  text-align: center;
+  color: var(--texto-suave);
+}
+
+.rodape {
+  width: min(900px, 100%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px 24px;
+}
+
+.rodape p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--texto-suave);
+}
+
+.rodape .botao {
+  min-height: clamp(42px, 8dvh, 48px);
+  padding: 0 24px;
+  font-size: 16px;
+}
+
+/* No celular: nome e preço numa linha, duração e "Agendar" na de baixo. */
+@media (max-width: 640px) {
+  li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'nome preco'
+      'duracao agendar';
+    row-gap: 6px;
+  }
+
+  .nome,
+  .preco {
+    font-size: 28px;
+  }
+
+  .nome {
+    grid-area: nome;
+  }
+
+  .preco {
+    grid-area: preco;
+  }
+
+  .duracao {
+    grid-area: duracao;
+  }
+
+  li a {
+    grid-area: agendar;
+  }
+
+  .pontilhado {
+    display: none;
+  }
+}

@@ -15,7 +15,7 @@ import {
 } from '../../core/api/modelos';
 import { conteudo, ultimoValor } from '../../core/api/recursos';
 import { Sessao } from '../../core/autenticacao/sessao';
-import { atendeEm } from '../../core/barbearia';
+import { PRAZO_PARA_MUDAR_EM_HORAS, atendeEm } from '../../core/barbearia';
 import {
   dataNoFuso,
   dataPorExtenso,
@@ -25,6 +25,7 @@ import {
   somarDias,
 } from '../../core/datas';
 import { Cabecalho } from '../../compartilhado/cabecalho/cabecalho';
+import { DuracaoPipe } from '../../compartilhado/formatos';
 import { Ingresso } from '../../compartilhado/ingresso/ingresso';
 import { agruparPorPeriodo, primeiroLivrePorHorario } from './grade';
 
@@ -44,7 +45,7 @@ const DIAS_VISIVEIS = 7;
 
 @Component({
   selector: 'app-horarios',
-  imports: [CurrencyPipe, RouterLink, Cabecalho, Ingresso],
+  imports: [CurrencyPipe, RouterLink, Cabecalho, DuracaoPipe, Ingresso],
   templateUrl: './horarios.html',
   styleUrl: './horarios.css',
 })
@@ -61,6 +62,11 @@ export class Horarios {
   readonly barbeiro = input<string>();
   readonly dia = input<string>();
   readonly horario = input<string>();
+  /**
+   * Id da reserva sendo remarcada, vindo de Minhas reservas: mesmo serviço e barbeiro, outro
+   * horário.
+   */
+  readonly remarcar = input<string>();
 
   private readonly agora = new Date();
   private readonly hoje = dataNoFuso(this.agora);
@@ -120,9 +126,13 @@ export class Horarios {
   });
   protected readonly opcoes = ultimoValor(this.livres, []);
   protected readonly periodos = computed(() => agruparPorPeriodo(this.opcoes()));
-  protected readonly escolhida = computed(
-    () => this.opcoes().find(({ inicio }) => inicio === this.horario()) ?? this.opcoes()[0] ?? null,
-  );
+  /** Depois de reservar nada fica marcado: o horário reservado sai da grade. */
+  protected readonly escolhida = computed(() => {
+    const opcoes = this.opcoes();
+    return this.reservado()
+      ? null
+      : (opcoes.find(({ inicio }) => inicio === this.horario()) ?? opcoes[0] ?? null);
+  });
 
   /** Na ordem em que dependem uma da outra. */
   private readonly buscas = [this.catalogo, this.equipe, this.livres];
@@ -130,6 +140,19 @@ export class Horarios {
   protected readonly falhou = computed(() =>
     this.buscas.some((busca) => busca.error() !== undefined),
   );
+
+  private readonly original = httpResource<Agendamento>(() => {
+    const id = this.remarcar();
+    return id ? `/api/agendamentos/${id}` : undefined;
+  });
+  /** Ex.: "sábado, 24 de outubro, 10:00". */
+  protected readonly horarioAntigo = computed(() => {
+    if (!this.original.hasValue()) {
+      return null;
+    }
+    const { inicio } = this.original.value();
+    return `${dataPorExtenso(dataNoFuso(inicio))}, ${horaNoFuso(inicio)}`;
+  });
 
   protected readonly reservando = signal(false);
   protected readonly erroDaReserva = signal<string | null>(null);
@@ -150,6 +173,16 @@ export class Horarios {
     const opcao = this.escolhida();
     return opcao ? this.textos(opcao, opcao.barbeiro) : null;
   });
+  protected readonly titulo = computed(() => {
+    const feito = this.reservado() !== null;
+    if (this.remarcar()) {
+      return feito ? 'Remarcado!' : 'Novo horário';
+    }
+    return feito ? 'Reservado!' : 'Seu horário';
+  });
+  protected readonly acao = computed(() => (this.remarcar() ? 'Remarcar para' : 'Reservar às'));
+  protected readonly prazo = PRAZO_PARA_MUDAR_EM_HORAS;
+
   protected readonly semPreferencia = computed(
     () => this.barbeiroAtual() === null && this.reservado() === null,
   );
@@ -200,6 +233,7 @@ export class Horarios {
           barbeiro: this.barbeiro() ?? null,
           dia: this.diaAtual(),
           horario: opcao.inicio,
+          remarcar: this.remarcar() ?? null,
         },
       });
       await this.router.navigate(['/entrar'], {
@@ -210,18 +244,26 @@ export class Horarios {
     if (!usuario.clienteId) {
       return;
     }
-    const pedido: NovoAgendamento = {
-      profissionalId: opcao.barbeiro.id,
-      servicoId: servico.id,
-      clienteId: usuario.clienteId,
-      inicio: opcao.inicio,
-    };
+    const remarcando = this.remarcar();
+    const pedido = remarcando
+      ? this.http.patch<Agendamento>(`/api/agendamentos/${remarcando}/reagendar`, {
+          inicio: opcao.inicio,
+        })
+      : this.http.post<Agendamento>('/api/agendamentos', {
+          profissionalId: opcao.barbeiro.id,
+          servicoId: servico.id,
+          clienteId: usuario.clienteId,
+          inicio: opcao.inicio,
+        } satisfies NovoAgendamento);
     this.reservando.set(true);
     this.erroDaReserva.set(null);
     try {
-      this.reservado.set(
-        await firstValueFrom(this.http.post<Agendamento>('/api/agendamentos', pedido)),
-      );
+      const feito = await firstValueFrom(pedido);
+      this.reservado.set(feito);
+      // Se remarcar de novo, o "Antes" já é este horário.
+      if (remarcando) {
+        this.original.set(feito);
+      }
     } catch (erro) {
       this.erroDaReserva.set(
         mensagemDeErro(erro, 'Não foi possível reservar. Escolha outro horário.'),

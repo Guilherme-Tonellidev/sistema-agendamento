@@ -1,0 +1,112 @@
+@let horario = bilhete();
+<app-ingresso role="region" aria-label="Encaixe de cliente">
+  <div topo>
+    <p class="rotulo">Encaixe</p>
+    <p class="hora-grande">{{ horario.inicio }}</p>
+    <p class="suave">
+      @if (servico(); as escolhido) {
+        até {{ horario.fim }}, {{ escolhido.nome.toLowerCase() }}
+      } @else {
+        Escolha o serviço
+      }
+    </p>
+  </div>
+
+  <form [formRoot]="cliente">
+    <div class="campo">
+      @let nome = cliente.nomeDoCliente();
+      <label for="nome-encaixe">Nome do cliente</label>
+      <input
+        id="nome-encaixe"
+        autocomplete="off"
+        placeholder="Quem chegou?"
+        [formField]="cliente.nomeDoCliente"
+        [attr.aria-invalid]="nome.touched() && nome.invalid()"
+        aria-describedby="nome-encaixe-erro"
+      />
+      @if (nome.touched() && nome.errors()[0]; as erro) {
+        <p class="erro-campo" id="nome-encaixe-erro">{{ erro.message }}</p>
+      }
+    </div>
+
+    <div class="campo">
+      @let telefone = cliente.telefone();
+      <label for="telefone-encaixe">Celular <span class="opcional">(opcional)</span></label>
+      <input
+        id="telefone-encaixe"
+        type="tel"
+        autocomplete="off"
+        [formField]="cliente.telefone"
+        [attr.aria-invalid]="telefone.touched() && telefone.invalid()"
+        aria-describedby="telefone-encaixe-erro"
+      />
+      @if (telefone.touched() && telefone.errors()[0]; as erro) {
+        <p class="erro-campo" id="telefone-encaixe-erro">{{ erro.message }}</p>
+      }
+    </div>
+
+    <div class="campo">
+      <span class="titulo-campo" id="servico-encaixe">Serviço</span>
+      <div class="opcoes" role="radiogroup" aria-labelledby="servico-encaixe">
+        @for (opcao of servicos(); track opcao.id) {
+          <button
+            type="button"
+            role="radio"
+            class="opcao"
+            [attr.aria-checked]="opcao.id === servicoId()"
+            (click)="servicoId.set(opcao.id)"
+          >
+            {{ opcao.nome }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="campo">
+      <span class="titulo-campo" id="horario-encaixe">Horários livres</span>
+      @if (opcoes().length) {
+        <div
+          class="opcoes grade"
+          role="radiogroup"
+          aria-labelledby="horario-encaixe"
+          [attr.aria-busy]="buscando()"
+        >
+          @for (opcao of opcoes(); track opcao.inicio) {
+            <button
+              type="button"
+              role="radio"
+              class="opcao"
+              [attr.aria-checked]="opcao.inicio === escolhido()?.inicio"
+              (click)="inicio.set(opcao.inicio)"
+            >
+              {{ opcao.hora }}
+            </button>
+          }
+        </div>
+      } @else {
+        <p class="nota">
+          @if (!servico()) {
+            Escolha o serviço para ver os horários.
+          } @else if (buscando()) {
+            Buscando horários…
+          } @else {
+            Nenhum horário livre para esse serviço.
+          }
+        </p>
+      }
+    </div>
+
+    @if (cliente().errors()[0]; as erro) {
+      <p class="erro" role="alert">{{ erro.message }}</p>
+    }
+
+    <button
+      type="submit"
+      class="botao primario"
+      [disabled]="cliente().submitting() || !escolhido()"
+    >
+      {{ cliente().submitting() ? 'Encaixando…' : 'Encaixar às ' + horario.inicio }}
+    </button>
+    <button type="button" class="botao secundario" (click)="voltar.emit()">Voltar</button>
+  </form>
+</app-ingresso>
