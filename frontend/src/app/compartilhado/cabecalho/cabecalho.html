@@ -11,11 +11,14 @@
         {{ link.rotulo }}
       </a>
     }
+  </nav>
+
+  <div class="conta">
     @if (sessao.logado()) {
       <span class="avatar" aria-hidden="true">{{ inicial() }}</span>
       <button type="button" class="sair" (click)="sessao.sair()">Sair</button>
     } @else {
       <a routerLink="/entrar" class="entrar">Entrar</a>
     }
-  </nav>
+  </div>
 </header>

@@ -1,0 +1,101 @@
+@let atendimento = agendamento();
+@let hora = horario();
+@let agoraEsta = estado();
+<app-ingresso role="region" aria-label="Atendimento escolhido">
+  <div topo>
+    <p class="rotulo">{{ atendimento.cliente.nome }}</p>
+    <p class="hora-grande">{{ hora.inicio }}</p>
+    <p class="suave">até {{ hora.fim }}, {{ hora.servico }}</p>
+  </div>
+
+  <dl>
+    <dt>Situação</dt>
+    <dd>{{ situacao() }}</dd>
+    <dt>Telefone</dt>
+    <dd>
+      @if (atendimento.cliente.telefone; as telefone) {
+        {{ telefone | telefone }}
+      } @else {
+        Não informado
+      }
+    </dd>
+    <dt>Valor</dt>
+    <dd>{{ atendimento.preco | currency: 'BRL' }}</dd>
+  </dl>
+
+  @if (erro(); as mensagem) {
+    <p class="erro" role="alert">{{ mensagem }}</p>
+  }
+
+  @if (agoraEsta === 'andamento' || agoraEsta === 'pendente') {
+    <div class="acoes">
+      <button
+        type="button"
+        class="botao primario"
+        [disabled]="enviando()"
+        (click)="enviar('concluir')"
+      >
+        Concluir atendimento
+      </button>
+      <button
+        type="button"
+        class="botao secundario"
+        [disabled]="enviando()"
+        (click)="enviar('nao-compareceu')"
+      >
+        Cliente não compareceu
+      </button>
+    </div>
+  } @else if (agoraEsta === 'confirmado') {
+    @if (confirmando()) {
+      <p class="nota">
+        Cancelar o horário das {{ hora.inicio }}? Ele volta a ficar livre na agenda.
+      </p>
+      <div class="acoes lado-a-lado">
+        <button type="button" class="botao secundario" (click)="confirmando.set(false)">
+          Voltar
+        </button>
+        <button
+          type="button"
+          class="botao escuro"
+          [disabled]="enviando()"
+          (click)="enviar('cancelar')"
+        >
+          {{ enviando() ? 'Cancelando…' : 'Sim, cancelar' }}
+        </button>
+      </div>
+    } @else {
+      <button type="button" class="botao secundario" (click)="confirmando.set(true)">
+        Cancelar e avisar o cliente
+      </button>
+    }
+  } @else if (agoraEsta === 'cancelado') {
+    <p class="nota">
+      Horário cancelado e livre na agenda.
+      @if (!whatsapp()) {
+        Sem telefone para avisar o cliente.
+      }
+    </p>
+  } @else {
+    <p class="nota">Atendimento encerrado. Nada mais a fazer aqui.</p>
+  }
+
+  @if (whatsapp(); as link) {
+    <a class="botao secundario" [href]="link" target="_blank" rel="noopener">
+      <svg
+        aria-hidden="true"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5z" />
+      </svg>
+      {{ agoraEsta === 'cancelado' ? 'Avisar no WhatsApp' : 'Chamar no WhatsApp' }}
+    </a>
+  }
+</app-ingresso>

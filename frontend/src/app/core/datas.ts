@@ -27,6 +27,8 @@ const formatoExtenso = new Intl.DateTimeFormat('pt-BR', {
   month: 'long',
 });
 
+const formatoDiaDaSemana = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', weekday: 'long' });
+
 const meioDiaUtc = (data: string) => new Date(`${data}T12:00:00Z`);
 
 /** Dia (AAAA-MM-DD) em que o instante cai no fuso da barbearia. */
@@ -43,6 +45,14 @@ export function horaNoFuso(instante: Date | string): string {
 export function minutosNoFuso(instante: Date | string): number {
   const [horas, minutos] = horaNoFuso(instante).split(':').map(Number);
   return horas * 60 + minutos;
+}
+
+/** O instante em que o relógio da barbearia marca a hora (HH:mm) no dia (AAAA-MM-DD). */
+export function instanteNoFuso(data: string, hora: string): Date {
+  // Lê os números do relógio como se fossem UTC e corrige pela diferença que o fuso mostra.
+  const comoUtc = new Date(`${data}T${hora}:00Z`);
+  const mostrado = new Date(`${dataNoFuso(comoUtc)}T${horaNoFuso(comoUtc)}:00Z`);
+  return new Date(2 * comoUtc.getTime() - mostrado.getTime());
 }
 
 export function somarDias(data: string, dias: number): string {
@@ -67,4 +77,21 @@ export function diaDoMes(data: string): number {
 /** Ex.: "quarta, 21 de outubro". */
 export function dataPorExtenso(data: string): string {
   return formatoExtenso.format(meioDiaUtc(data)).replace('-feira', '');
+}
+
+/** Ex.: "quarta". */
+export function diaDaSemanaPorExtenso(data: string): string {
+  return formatoDiaDaSemana.format(meioDiaUtc(data)).replace('-feira', '');
+}
+
+export function comMaiuscula(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/** "Hoje, quarta 21", "Amanhã, quinta 22" ou "Sábado, 24 de outubro". */
+export function rotuloDoDia(data: string, hoje: string): string {
+  const perto = data === hoje ? 'Hoje' : data === somarDias(hoje, 1) ? 'Amanhã' : null;
+  return perto
+    ? `${perto}, ${diaDaSemanaPorExtenso(data)} ${diaDoMes(data)}`
+    : comMaiuscula(dataPorExtenso(data));
 }

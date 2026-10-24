@@ -1,0 +1,192 @@
+<app-cabecalho />
+
+<main class="pagina">
+  <div class="barra">
+    @if (barbeiros().length) {
+      <div class="equipe" role="radiogroup" aria-label="Agenda de">
+        @for (barbeiro of barbeiros(); track barbeiro.id) {
+          <button
+            type="button"
+            role="radio"
+            class="ficha"
+            [attr.aria-checked]="barbeiro.id === profissionalId()"
+            (click)="escolherBarbeiro(barbeiro.id)"
+          >
+            {{ barbeiro.nome }}
+          </button>
+        }
+      </div>
+    }
+
+    <div class="dias" role="group" aria-label="Dia">
+      @for (dia of dias(); track dia.data) {
+        <button
+          type="button"
+          class="dia"
+          [attr.aria-pressed]="dia.data === diaAtual()"
+          (click)="escolherDia(dia.data)"
+        >
+          <span>{{ dia.rotulo }}</span>
+          <strong>{{ dia.numero }}</strong>
+        </button>
+      }
+    </div>
+
+    <div class="acoes">
+      <button
+        type="button"
+        class="acao"
+        [attr.aria-pressed]="painel() === 'encaixe'"
+        [disabled]="!podeMarcar()"
+        (click)="alternar('encaixe')"
+      >
+        <svg
+          aria-hidden="true"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Encaixar cliente
+      </button>
+      <button
+        type="button"
+        class="acao"
+        [attr.aria-pressed]="painel() === 'bloqueio'"
+        [disabled]="!podeMarcar()"
+        (click)="alternar('bloqueio')"
+      >
+        Bloquear horário
+      </button>
+    </div>
+  </div>
+
+  <aside #lado class="lado">
+    @let dia = resumo();
+    <dl class="resumo" aria-label="Resumo do dia">
+      <div>
+        <dt>concluídos</dt>
+        <dd>{{ dia.concluidos }} de {{ dia.total }}</dd>
+      </div>
+      <div>
+        <dt>previstos</dt>
+        <dd class="dinheiro">{{ dia.previsto | preco }}</dd>
+      </div>
+      <div>
+        <dt>{{ quando().rotulo }}</dt>
+        <dd>{{ quando().valor }}</dd>
+      </div>
+    </dl>
+
+    @if (profissionalId(); as id) {
+      @switch (painel()) {
+        @case ('encaixe') {
+          <app-painel-encaixe
+            [profissionalId]="id"
+            [dia]="diaAtual()"
+            [servicos]="servicos()"
+            [desejado]="inicioDoEncaixe()"
+            (horario)="horarioDoEncaixe.set($event)"
+            (encaixado)="encaixado($event)"
+            (voltar)="painel.set('atendimento')"
+          />
+        }
+        @case ('bloqueio') {
+          <app-painel-bloqueio
+            [profissionalId]="id"
+            [dia]="diaAtual()"
+            (bloqueado)="bloqueado()"
+            (voltar)="painel.set('atendimento')"
+          />
+        }
+        @default {
+          @if (atual(); as agendamento) {
+            <app-painel-atendimento
+              [agendamento]="agendamento"
+              [agora]="agora()"
+              (mudou)="recarregar()"
+            />
+          } @else if (!carregando()) {
+            <app-ingresso role="region" aria-label="Atendimento escolhido">
+              <p topo class="livre">Dia livre</p>
+              <p class="sem-atendimento">Nenhum atendimento marcado neste dia.</p>
+            </app-ingresso>
+          }
+        }
+      }
+    }
+  </aside>
+
+  <section class="lista" aria-label="Atendimentos do dia">
+    @if (aviso(); as mensagem) {
+      <p class="erro" role="alert">{{ mensagem }}</p>
+    }
+
+    @if (falhou()) {
+      <p class="aviso" role="alert">
+        Não foi possível carregar a agenda.
+        <button type="button" class="link" (click)="tentarDeNovo()">Tentar de novo</button>
+      </p>
+    } @else if (carregando()) {
+      <p class="aviso">Carregando a agenda…</p>
+    } @else {
+      @for (secao of secoes(); track secao.id) {
+        <div class="secao" role="list" [attr.aria-labelledby]="'secao-' + secao.id">
+          <h2 [id]="'secao-' + secao.id">{{ secao.titulo }}</h2>
+          @for (linha of secao.linhas; track linha.chave) {
+            <div role="listitem">
+              @switch (linha.tipo) {
+                @case ('atendimento') {
+                  <button
+                    type="button"
+                    class="linha"
+                    [class.encerrada]="linha.encerrado"
+                    [attr.aria-pressed]="linha.marcado"
+                    (click)="selecionar(linha.agendamento)"
+                  >
+                    <span class="hora">{{ linha.hora }}</span>
+                    <span class="quem">
+                      <strong>{{ linha.cliente }}</strong>
+                      <small>{{ linha.detalhe }}</small>
+                    </span>
+                    <span class="selo" [attr.data-estado]="linha.estado">
+                      {{ selo[linha.estado] }}
+                    </span>
+                  </button>
+                }
+                @case ('vao') {
+                  <button
+                    type="button"
+                    class="vao"
+                    [class.encaixando]="linha.encaixando"
+                    (click)="encaixar(linha.inicio)"
+                  >
+                    <span class="hora">{{ linha.hora }}</span>
+                    <span>{{ linha.texto }}</span>
+                    <span class="chamada">{{ linha.chamada }}</span>
+                  </button>
+                }
+                @case ('bloqueio') {
+                  <div class="bloqueio">
+                    <span class="hora">{{ linha.hora }}</span>
+                    <span>{{ linha.texto }}</span>
+                    <button type="button" class="link" (click)="desbloquear(linha.id)">
+                      Desbloquear
+                    </button>
+                  </div>
+                }
+              }
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="aviso">Nenhum atendimento neste dia.</p>
+      }
+    }
+  </section>
+</main>

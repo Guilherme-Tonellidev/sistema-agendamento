@@ -1,0 +1,240 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  padding: 40px clamp(16px, 4vw, 56px) 56px;
+}
+
+.topo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+}
+
+h1 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-weight: 800;
+  font-size: clamp(52px, 8vw, 72px);
+  line-height: 0.9;
+}
+
+.topo .botao {
+  min-height: 48px;
+  padding: 0 26px;
+  font-size: 16px;
+}
+
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.aviso {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+/* Tickets das próximas reservas, até três por linha; o de hoje ganha a sombra dourada. */
+.cartoes {
+  --vao: 28px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(290px, (100% - 2 * var(--vao)) / 3), 1fr));
+  gap: var(--vao);
+}
+
+app-ingresso {
+  --sombra-do-ingresso: var(--moldura);
+}
+
+app-ingresso.hoje {
+  --sombra-do-ingresso: var(--dourado-botao);
+}
+
+.quando {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+}
+
+.data {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dia {
+  align-self: start;
+  padding: 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-escuro-suave);
+}
+
+.hoje .dia {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--dourado-botao);
+  color: var(--tinta);
+  font-weight: 700;
+}
+
+.hora {
+  font-family: var(--fonte-titulo);
+  font-weight: 800;
+  font-size: 72px;
+  line-height: 0.85;
+}
+
+.ate {
+  padding-bottom: 6px;
+  font-size: 15px;
+  color: var(--texto-escuro-suave);
+}
+
+app-ingresso p {
+  margin: 0;
+  font-size: 16px;
+}
+
+app-ingresso .nota {
+  font-size: 13px;
+  color: var(--texto-escuro-suave);
+}
+
+.acoes {
+  display: flex;
+  gap: 10px;
+}
+
+.acoes .botao {
+  flex: 1;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.acoes .botao:disabled {
+  opacity: 1;
+  border-color: var(--linha-papel);
+  background: transparent;
+  color: #8c8477;
+}
+
+app-ingresso :focus-visible {
+  outline-color: var(--tinta);
+}
+
+/* Histórico: uma linha por reserva, com atalho para repetir. */
+.historico {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 15px;
+}
+
+.historico li {
+  display: grid;
+  grid-template-columns: 200px 90px minmax(0, 1fr) 210px 170px;
+  align-items: center;
+  min-height: 48px;
+  border-top: 1px solid var(--linha);
+}
+
+.historico li:last-child {
+  border-bottom: 1px solid var(--linha);
+}
+
+.hora-curta {
+  font-family: var(--fonte-titulo);
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.situacao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.situacao::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--texto-claro);
+}
+
+.situacao[data-status='CANCELADO'] {
+  color: var(--texto-suave);
+}
+
+.situacao[data-status='CANCELADO']::before {
+  border: 2px solid var(--texto-suave);
+  background: transparent;
+}
+
+.situacao[data-status='NAO_COMPARECEU'] {
+  color: #e0796f;
+}
+
+.situacao[data-status='NAO_COMPARECEU']::before {
+  border-radius: 2px;
+  background: repeating-linear-gradient(135deg, #e0796f 0 2px, #5c1f1a 2px 4px);
+}
+
+.de-novo {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* No celular, cada reserva do histórico vira um bloco de três linhas. */
+@media (max-width: 900px) {
+  .historico li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'quando hora'
+      'oque oque'
+      'situacao de-novo';
+    gap: 2px 16px;
+    padding: 10px 0;
+  }
+
+  .quando-foi {
+    grid-area: quando;
+  }
+
+  .hora-curta {
+    grid-area: hora;
+    justify-self: end;
+  }
+
+  .o-que {
+    grid-area: oque;
+  }
+
+  .situacao {
+    grid-area: situacao;
+  }
+
+  .de-novo {
+    grid-area: de-novo;
+  }
+}

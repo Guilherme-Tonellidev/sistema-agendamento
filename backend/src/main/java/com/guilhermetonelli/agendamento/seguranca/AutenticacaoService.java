@@ -60,14 +60,20 @@ public class AutenticacaoService {
         this.clock = clock;
     }
 
-    /** Autocadastro de cliente. O e-mail não pode pertencer a outra conta nem a outro cadastro. */
+    /** Autocadastro de cliente, que já sai com a sessão aberta. */
     @Transactional
     SessaoAberta cadastrar(CadastroRequest request) {
+        return abrirSessao(criarContaDeCliente(request), UUID.randomUUID());
+    }
+
+    /** Cria o cadastro e a conta do cliente. O e-mail não pode pertencer a outra conta nem a outro cadastro. */
+    @Transactional
+    public Usuario criarContaDeCliente(CadastroRequest request) {
         String email = Textos.normalizarEmail(request.email());
         garantirEmailLivre(email);
         String senhaHash = senhas.hash(request.senha());
         UUID clienteId = clienteService.cadastrar(new ClienteRequest(request.nome(), email, request.telefone())).id();
-        return abrirSessao(usuarios.save(Usuario.cliente(email, senhaHash, clienteId)), UUID.randomUUID());
+        return usuarios.save(Usuario.cliente(email, senhaHash, clienteId));
     }
 
     @Transactional
@@ -120,7 +126,7 @@ public class AutenticacaoService {
 
     /** Cria ou troca a senha de acesso de um profissional; o login é o e-mail do cadastro dele. */
     @Transactional
-    void definirAcessoDeProfissional(UUID profissionalId, String senha) {
+    public void definirAcessoDeProfissional(UUID profissionalId, String senha) {
         String senhaHash = senhas.hash(senha);
         usuarios.findByProfissionalId(profissionalId).ifPresentOrElse(
                 usuario -> usuario.definirSenha(senhaHash),

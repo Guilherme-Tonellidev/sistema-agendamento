@@ -29,6 +29,15 @@
   color: var(--texto-suave);
 }
 
+.mesmo-barbeiro {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.mesmo-barbeiro strong {
+  color: var(--texto-claro);
+}
+
 .linha-barbeiro {
   display: flex;
   align-items: center;

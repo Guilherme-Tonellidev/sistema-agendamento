@@ -1,6 +1,6 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 
-import { FUNCIONAMENTO, abertaEm, expedienteDo } from '../../core/barbearia';
+import { FUNCIONAMENTO, abertaEm, expedienteDo, horarioDe } from '../../core/barbearia';
 import { dataNoFuso } from '../../core/datas';
 
 /** A fachada da barbearia: poste, letreiro no vidro, horário e o neon de aberto ou fechado. */
@@ -16,7 +16,7 @@ export class Vitrine {
   protected readonly horarios = computed(() =>
     FUNCIONAMENTO.map((expediente) => ({
       rotulo: expediente.rotulo,
-      valor: expediente.abre === null ? 'fechado' : `${expediente.abre}h às ${expediente.fecha}h`,
+      valor: horarioDe(expediente),
       hoje: expediente === this.expedienteDeHoje(),
     })),
   );
