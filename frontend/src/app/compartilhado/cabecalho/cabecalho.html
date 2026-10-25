@@ -15,6 +15,9 @@
 
   <div class="conta">
     @if (sessao.logado()) {
+      @if (ehBarbeiro()) {
+        <app-sino />
+      }
       <span class="avatar" aria-hidden="true">{{ inicial() }}</span>
       <button type="button" class="sair" (click)="sessao.sair()">Sair</button>
     } @else {

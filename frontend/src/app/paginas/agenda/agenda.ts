@@ -4,9 +4,11 @@ import {
   DestroyRef,
   ElementRef,
   computed,
+  effect,
   inject,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
@@ -31,6 +33,7 @@ import {
   horaNoFuso,
   somarDias,
 } from '../../core/datas';
+import { Notificacoes } from '../../core/notificacoes/notificacoes';
 import { Cabecalho } from '../../compartilhado/cabecalho/cabecalho';
 import { PrecoPipe, duracao } from '../../compartilhado/formatos';
 import { Ingresso } from '../../compartilhado/ingresso/ingresso';
@@ -96,6 +99,7 @@ export class Agenda {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly sessao = inject(Sessao);
+  private readonly notificacoes = inject(Notificacoes);
 
   /** O dia (AAAA-MM-DD) e, para o administrador, o barbeiro ficam na URL. */
   readonly dia = input<string>();
@@ -268,6 +272,16 @@ export class Agenda {
       this.recarregar();
     }, ATUALIZAR_A_CADA_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(relogio));
+
+    // Reserva, remarcação ou cancelamento que o sino acabou de trazer já aparece na fila.
+    let vistas = this.notificacoes.chegouNova();
+    effect(() => {
+      const chegadas = this.notificacoes.chegouNova();
+      if (chegadas > vistas) {
+        untracked(() => this.recarregar());
+      }
+      vistas = chegadas;
+    });
   }
 
   protected escolherDia(data: string): void {

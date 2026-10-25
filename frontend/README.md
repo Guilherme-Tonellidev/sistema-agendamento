@@ -25,8 +25,8 @@ front e API ficam na mesma origem e o cookie do refresh token funciona sem CORS.
 
 ```text
 src/app/
-├── core/           sessão, interceptors, guardas, contratos da API, datas e horário da casa
-├── compartilhado/  vitrine, cabeçalho, ticket, marca, barra de carregamento, formatos e telefone
+├── core/           sessão, interceptors, guardas, contratos da API, datas, horário da casa e notificações
+├── compartilhado/  vitrine, cabeçalho, sino, ticket, marca, barra de carregamento, formatos e telefone
 └── paginas/        uma pasta por tela
 ```
 
@@ -47,3 +47,7 @@ src/app/
   os vãos livres e os bloqueios, recalculados a cada minuto. Encaixe e bloqueio saem dali mesmo.
 - **WhatsApp com a mensagem pronta:** links `wa.me` para chamar o cliente ou avisar de um
   cancelamento, com o dia e o horário no texto.
+- **Sino do barbeiro por consulta.** O serviço `Notificacoes` pergunta a `/api/notificacoes` a cada
+  30 s com a aba à vista e ao voltar para ela, só enquanto há um barbeiro logado. Notificação nova
+  também recarrega a fila da Agenda. Sem WebSocket: o aviso só precisa chegar em alguns segundos, e
+  a consulta não exige um segundo canal em tempo real no back-end.

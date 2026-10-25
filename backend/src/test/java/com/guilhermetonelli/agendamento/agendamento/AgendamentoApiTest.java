@@ -38,6 +38,7 @@ import com.guilhermetonelli.agendamento.agendamento.dto.ReagendamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCancelado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
+import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
 import com.guilhermetonelli.agendamento.cliente.dto.ClienteRequest;
 import com.guilhermetonelli.agendamento.cliente.dto.ClienteResponse;
 import com.guilhermetonelli.agendamento.disponibilidade.dto.BloqueioRequest;
@@ -49,6 +50,7 @@ import com.guilhermetonelli.agendamento.profissional.dto.ProfissionalResponse;
 import com.guilhermetonelli.agendamento.profissional.dto.ServicosDoProfissionalRequest;
 import com.guilhermetonelli.agendamento.servico.dto.ServicoRequest;
 import com.guilhermetonelli.agendamento.servico.dto.ServicoResponse;
+import com.guilhermetonelli.agendamento.seguranca.Papel;
 import com.jayway.jsonpath.JsonPath;
 
 /** Jornada de quarta, 21/10/2026, das 08:00 às 12:00 em São Paulo (11:00 às 15:00 UTC); serviço de 30 minutos. */
@@ -92,7 +94,19 @@ class AgendamentoApiTest extends IntegracaoTest {
         assertThat(agendamento.servico().nome()).isEqualTo("Corte");
         assertThat(agendamento.cliente().nome()).isEqualTo("Carlos Lima");
         assertThat(eventos.todos()).containsExactly(new AgendamentoCriado(
-                agendamento.id(), ana, carlos, Instant.parse(AS_8H), Instant.parse(AS_8H30)));
+                agendamento.id(), ana, carlos, Instant.parse(AS_8H), Instant.parse(AS_8H30),
+                aviso(Papel.ADMIN, "Carlos Lima", "carlos@gmail.com")));
+    }
+
+    @Test
+    void reservaDoClienteTrazAutorClienteENomes() {
+        api = apiComo(comoCliente(carlos));
+
+        UUID agendamento = id(reservar(ana, carlos, AS_8H));
+
+        assertThat(eventos.todos()).containsExactly(new AgendamentoCriado(
+                agendamento, ana, carlos, Instant.parse(AS_8H), Instant.parse(AS_8H30),
+                aviso(Papel.CLIENTE, "Carlos Lima", "carlos@gmail.com")));
     }
 
     @Test
@@ -156,7 +170,8 @@ class AgendamentoApiTest extends IntegracaoTest {
         assertThat(agendamento.cliente())
                 .isEqualTo(new ClienteResponse(agendamento.cliente().id(), "Júlia Prado", null, "14998123344"));
         assertThat(eventos.todos()).containsExactly(new AgendamentoCriado(
-                agendamento.id(), ana, agendamento.cliente().id(), Instant.parse(AS_8H), Instant.parse(AS_8H30)));
+                agendamento.id(), ana, agendamento.cliente().id(), Instant.parse(AS_8H), Instant.parse(AS_8H30),
+                aviso(Papel.PROFISSIONAL, "Júlia Prado", null)));
     }
 
     @Test
@@ -293,7 +308,7 @@ class AgendamentoApiTest extends IntegracaoTest {
 
         assertThat(respostas).extracting(ResponseEntity::getStatusCode)
                 .containsOnly(HttpStatus.CREATED, HttpStatus.CONFLICT)
-                .filteredOn(HttpStatus.CREATED::equals).hasSize(1);
+                .filteredOn(HttpStatus.CREATED::isSameCodeAs).hasSize(1);
         assertThat(respostas).filteredOn(r -> r.getStatusCode() == HttpStatus.CONFLICT)
                 .allSatisfy(conflito("Horário indisponível"));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM agendamento", Integer.class)).isEqualTo(1);
@@ -348,6 +363,7 @@ class AgendamentoApiTest extends IntegracaoTest {
         reservar(bruno, diana, AS_8H);
         reservar(ana, diana, AS_9H);
         reservar(bruno, carlos, AS_9H);
+        filas.pararConsumidores(); // a estatística é global: consulta de consumidor ainda gravando notificação entraria na conta
         Statistics estatisticas = emf.unwrap(SessionFactory.class).getStatistics();
         estatisticas.clear();
         estatisticas.setStatisticsEnabled(true);
@@ -356,6 +372,7 @@ class AgendamentoApiTest extends IntegracaoTest {
             assertThat(estatisticas.getPrepareStatementCount()).isEqualTo(1);
         } finally {
             estatisticas.setStatisticsEnabled(false);
+            filas.religarConsumidores();
         }
     }
 
@@ -378,11 +395,25 @@ class AgendamentoApiTest extends IntegracaoTest {
         assertThat(cancelado.status()).isEqualTo(StatusAgendamento.CANCELADO);
         assertThat(cancelado.canceladoEm()).isEqualTo(relogio.instant());
         assertThat(cancelado.motivoCancelamento()).isEqualTo("Imprevisto");
-        assertThat(eventos.todos()).containsExactly(
-                new AgendamentoCancelado(agendamento, ana, carlos, Instant.parse(AS_8H), "Imprevisto"));
+        assertThat(eventos.todos()).containsExactly(new AgendamentoCancelado(
+                agendamento, ana, carlos, Instant.parse(AS_8H), "Imprevisto",
+                aviso(Papel.ADMIN, "Carlos Lima", "carlos@gmail.com")));
         assertThat(horariosLivres(ana)).extracting(HorarioLivreResponse::inicio).contains(Instant.parse(AS_8H));
         assertThat(reservar(ana, diana, AS_8H).getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(cancelar(agendamento, null)).satisfies(regraDeNegocio("status CANCELADO"));
+    }
+
+    @Test
+    void cancelamentoDoBarbeiroTemAutorProfissional() {
+        UUID agendamento = id(reservar(ana, carlos, AS_8H));
+        eventos.limpar();
+        api = apiComo(comoProfissional(ana));
+
+        cancelar(agendamento, "Imprevisto");
+
+        assertThat(eventos.todos()).containsExactly(new AgendamentoCancelado(
+                agendamento, ana, carlos, Instant.parse(AS_8H), "Imprevisto",
+                aviso(Papel.PROFISSIONAL, "Carlos Lima", "carlos@gmail.com")));
     }
 
     @Test
@@ -453,7 +484,8 @@ class AgendamentoApiTest extends IntegracaoTest {
         assertThat(reagendado.fim()).isEqualTo(Instant.parse("2026-10-21T12:45:00Z"));
         assertThat(reagendado.preco()).isEqualByComparingTo("45.00");
         assertThat(eventos.todos()).containsExactly(new AgendamentoReagendado(
-                agendamento, ana, carlos, Instant.parse(AS_8H), Instant.parse(AS_9H), Instant.parse("2026-10-21T12:45:00Z")));
+                agendamento, ana, carlos, Instant.parse(AS_8H), Instant.parse(AS_9H), Instant.parse("2026-10-21T12:45:00Z"),
+                aviso(Papel.ADMIN, "Carlos Lima", "carlos@gmail.com")));
         assertThat(horariosLivres(ana)).extracting(HorarioLivreResponse::inicio).contains(Instant.parse(AS_8H));
     }
 
@@ -551,6 +583,11 @@ class AgendamentoApiTest extends IntegracaoTest {
             assertThat(resposta.getStatusCode()).isEqualTo(status);
             assertThat(JsonPath.<String>read(resposta.getBody(), "$.detail")).contains(trecho);
         };
+    }
+
+    /** O aviso que os eventos carregam: nomes e preço de agora, como o cenário cadastrou. */
+    private static Aviso aviso(Papel autor, String cliente, String emailDoCliente) {
+        return new Aviso(autor, cliente, emailDoCliente, "Ana Souza", "Corte", new BigDecimal("45.00"));
     }
 
     private ResponseEntity<String> reservar(UUID profissional, UUID cliente, String inicio) {

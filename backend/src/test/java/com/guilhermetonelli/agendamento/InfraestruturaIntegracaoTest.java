@@ -8,6 +8,12 @@ import org.springframework.http.HttpStatus;
 class InfraestruturaIntegracaoTest extends IntegracaoTest {
 
     @Test
+    void rabbitmqEMailpitEstaoNoAr() {
+        assertThat(filas.quantidadeNa("fila.que.nao.existe")).isZero();
+        assertThat(mailpit.para("ninguem@exemplo.com")).isEmpty();
+    }
+
+    @Test
     void healthDeveResponderUp() {
         var resposta = api.get().uri("/actuator/health").retrieve().toEntity(String.class);
 
@@ -28,6 +34,6 @@ class InfraestruturaIntegracaoTest extends IntegracaoTest {
         var resposta = api.get().uri("/v3/api-docs").retrieve().toEntity(String.class);
 
         assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(resposta.getBody()).contains("/api/profissionais", "/api/servicos", "/api/clientes", "/horarios-livres", "/api/agendamentos");
+        assertThat(resposta.getBody()).contains("/api/profissionais", "/api/servicos", "/api/clientes", "/horarios-livres", "/api/agendamentos", "/api/notificacoes");
     }
 }

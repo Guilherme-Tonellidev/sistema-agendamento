@@ -1,4 +1,4 @@
-# Stack de produção: API + PostgreSQL. Uso: cp .env.example .env (ajuste as senhas) e
+# Stack de produção: API + PostgreSQL + RabbitMQ. Uso: cp .env.example .env (ajuste as senhas) e
 # docker compose -f docker-compose.prod.yml up -d
 name: agendamento-prod
 
@@ -18,12 +18,32 @@ services:
       timeout: 3s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:4-alpine
+    restart: unless-stopped
+    # Sem portas publicadas: só a API, pela rede interna do Compose, fala com o broker.
+    # O RabbitMQ guarda os dados numa pasta com o nome do nó (rabbit@<hostname>): com o nome fixo,
+    # recriar o contêiner reaproveita as filas, inclusive a de erros.
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?defina RABBITMQ_DEFAULT_USER no .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?defina RABBITMQ_DEFAULT_PASS no .env}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   api:
     image: ghcr.io/guilherme-tonellidev/sistema-agendamento-api:${API_TAG:-latest}
     build: ./backend
     restart: unless-stopped
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-agendamento}
@@ -34,6 +54,15 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_SENHA: ${ADMIN_SENHA:-}
       CORS_ORIGENS: ${CORS_ORIGENS:-http://localhost:4200}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
+      # Sem MAIL_HOST a API sobe e só registra no log quem receberia cada e-mail.
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USUARIO: ${MAIL_USUARIO:-}
+      MAIL_SENHA: ${MAIL_SENHA:-}
+      MAIL_REMETENTE: "${MAIL_REMETENTE:-Barbearia Tonelli <nao-responder@localhost>}"
     ports:
       - "${API_PORT:-8080}:8080"
     healthcheck:
@@ -45,3 +74,4 @@ services:
 
 volumes:
   postgres-data:
+  rabbitmq-data:

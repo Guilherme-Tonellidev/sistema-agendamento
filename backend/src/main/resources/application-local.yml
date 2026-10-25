@@ -6,6 +6,11 @@ spring:
     url: jdbc:postgresql://localhost:${POSTGRES_PORT:5433}/agendamento
     username: agendamento
     password: agendamento
+  # O RabbitMQ do docker-compose.yml (localhost:5672, guest/guest) já é o padrão do Spring.
+  # O Mailpit recebe os e-mails em localhost:1025; a caixa de entrada fica em http://localhost:8025.
+  mail:
+    host: localhost
+    port: 1025
 
 # Valores só para desenvolvimento. Em produção, JWT_SEGREDO, ADMIN_EMAIL e ADMIN_SENHA vêm do ambiente.
 seguranca:

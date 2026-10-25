@@ -30,6 +30,7 @@ import com.guilhermetonelli.agendamento.agendamento.dto.ReagendamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCancelado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
+import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
 import com.guilhermetonelli.agendamento.cliente.Cliente;
 import com.guilhermetonelli.agendamento.cliente.ClienteService;
 import com.guilhermetonelli.agendamento.disponibilidade.DisponibilidadeService;
@@ -101,7 +102,7 @@ public class AgendamentoService {
         Profissional profissional = profissionalService.obterComTrava(request.profissionalId());
         Cliente cliente = clienteService.obter(request.clienteId());
         return marcar(
-                profissional, request.servicoId(), cliente, request.inicio(), properties.antecedenciaMinimaReserva());
+                profissional, request.servicoId(), cliente, request.inicio(), properties.antecedenciaMinimaReserva(), eu);
     }
 
     /**
@@ -113,7 +114,7 @@ public class AgendamentoService {
         eu.garantirAgendaDe(request.profissionalId());
         Profissional profissional = profissionalService.obterComTrava(request.profissionalId());
         Cliente cliente = clienteService.cadastrarSemConta(request.nomeDoCliente(), request.telefone());
-        return marcar(profissional, request.servicoId(), cliente, request.inicio(), Duration.ZERO);
+        return marcar(profissional, request.servicoId(), cliente, request.inicio(), Duration.ZERO, eu);
     }
 
     public Page<AgendamentoResponse> listar(AgendamentoFiltro pedido, Pageable pageable, UsuarioLogado eu) {
@@ -138,7 +139,8 @@ public class AgendamentoService {
                 profissionalId(agendamento),
                 clienteId(agendamento),
                 agendamento.getInicio(),
-                agendamento.getMotivoCancelamento()));
+                agendamento.getMotivoCancelamento(),
+                aviso(agendamento, eu)));
         return mapper.paraResponse(agendamento);
     }
 
@@ -163,7 +165,13 @@ public class AgendamentoService {
         agendamento.reagendar(horario, agora, antecedencia);
         salvar(agendamento);
         eventos.publishEvent(new AgendamentoReagendado(
-                id, profissionalId(agendamento), clienteId(agendamento), inicioAnterior, horario.inicio(), horario.fim()));
+                id,
+                profissionalId(agendamento),
+                clienteId(agendamento),
+                inicioAnterior,
+                horario.inicio(),
+                horario.fim(),
+                aviso(agendamento, eu)));
         return mapper.paraResponse(agendamento);
     }
 
@@ -186,15 +194,33 @@ public class AgendamentoService {
      * mesma agenda, então a checagem de disponibilidade e a gravação acontecem sem ninguém mudar a agenda no meio.
      */
     private AgendamentoResponse marcar(
-            Profissional profissional, UUID servicoId, Cliente cliente, Instant inicio, Duration antecedencia) {
+            Profissional profissional,
+            UUID servicoId,
+            Cliente cliente,
+            Instant inicio,
+            Duration antecedencia,
+            UsuarioLogado eu) {
         Servico servico = servicoService.obter(servicoId);
         Periodo horario = disponibilidadeService.garantirHorarioNaAgenda(profissional, servico, inicio, antecedencia);
         garantirSemConflito(profissional.getId(), cliente.getId(), horario, Specification.unrestricted());
 
         Agendamento agendamento = salvar(new Agendamento(profissional, servico, cliente, horario));
         eventos.publishEvent(new AgendamentoCriado(
-                agendamento.getId(), profissional.getId(), cliente.getId(), horario.inicio(), horario.fim()));
+                agendamento.getId(), profissional.getId(), cliente.getId(), horario.inicio(), horario.fim(),
+                aviso(agendamento, eu)));
         return mapper.paraResponse(agendamento);
+    }
+
+    /** O preço é o gravado no agendamento, não o atual do serviço. */
+    private static Aviso aviso(Agendamento agendamento, UsuarioLogado eu) {
+        Cliente cliente = agendamento.getCliente();
+        return new Aviso(
+                eu.papel(),
+                cliente.getNome(),
+                cliente.getEmail(),
+                agendamento.getProfissional().getNome(),
+                agendamento.getServico().getNome(),
+                agendamento.getPreco());
     }
 
     private void garantirSemConflito(

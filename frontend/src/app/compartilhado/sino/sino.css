@@ -1,0 +1,177 @@
+:host {
+  position: relative;
+  display: block;
+}
+
+.sino {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--linha);
+  border-radius: 50%;
+  background: none;
+  color: var(--texto-claro);
+}
+
+.sino:hover,
+.sino[aria-expanded='true'] {
+  border-color: var(--dourado-botao);
+  color: var(--dourado-claro);
+}
+
+.contador {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--carvao);
+  border-radius: 999px;
+  background: var(--vermelho-poste);
+  color: var(--creme-claro);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* O painel é um ticket de papel: cabeçalho, picote e a lista, que rola por dentro quando é longa. */
+.painel {
+  --papel: var(--creme);
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 22px);
+  right: 0;
+  width: 360px;
+  max-height: min(72dvh, 520px);
+  display: flex;
+  flex-direction: column;
+  color: var(--tinta);
+  filter: drop-shadow(0 6px 0 var(--dourado-botao));
+}
+
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 8px;
+  background: var(--papel);
+  border-radius: 18px 18px 0 0;
+}
+
+h2 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.todas {
+  border: 0;
+  background: none;
+  padding: 8px 0;
+  color: var(--tinta);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-align: right;
+}
+
+.picote {
+  flex: none;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  background:
+    radial-gradient(circle at 0 50%, transparent 12px, var(--papel) 13px) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 50%, transparent 12px, var(--papel) 13px) right / 51% 100%
+      no-repeat;
+}
+
+.picote span {
+  flex: 1;
+  border-top: 2px dashed var(--linha-papel);
+}
+
+.lista,
+.vazio {
+  margin: 0;
+  background: var(--papel);
+  border-radius: 0 0 18px 18px;
+}
+
+.lista {
+  min-height: 0;
+  padding: 0 0 6px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.vazio {
+  padding: 8px 20px 20px;
+  color: var(--texto-escuro-suave);
+  font-size: 15px;
+}
+
+li + li {
+  border-top: 1px solid var(--linha-papel);
+}
+
+.item {
+  width: 100%;
+  padding: 12px 20px 12px 34px;
+  border: 0;
+  background: none;
+  color: var(--texto-escuro-suave);
+  font-size: 15px;
+  line-height: 1.4;
+  text-align: left;
+  position: relative;
+}
+
+.item:hover {
+  background: rgb(28 25 23 / 0.06);
+}
+
+.item:focus-visible {
+  outline-color: var(--tinta);
+  outline-offset: -3px;
+}
+
+.item.nao-lida {
+  color: var(--tinta);
+  font-weight: 700;
+}
+
+.item.nao-lida::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 19px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--vermelho-poste);
+}
+
+/* No celular o painel ocupa a largura da tela, logo abaixo do cabeçalho. */
+@media (max-width: 640px) {
+  :host {
+    position: static;
+  }
+
+  .painel {
+    top: calc(100% + 8px);
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}

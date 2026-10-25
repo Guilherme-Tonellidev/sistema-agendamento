@@ -110,6 +110,24 @@ export interface Bloqueio {
 
 export type NovoBloqueio = Omit<Bloqueio, 'id'>;
 
+export type TipoDeNotificacao = 'CRIADO' | 'REMARCADO' | 'CANCELADO';
+
+/** Aviso do sino do barbeiro; o texto já vem pronto do back-end. */
+export interface Notificacao {
+  readonly id: string;
+  readonly tipo: TipoDeNotificacao;
+  readonly texto: string;
+  /** Horário da reserva, para abrir a Agenda no dia certo. */
+  readonly inicio: string;
+  readonly criadaEm: string;
+  readonly lida: boolean;
+}
+
+export interface NotificacoesResposta {
+  readonly naoLidas: number;
+  readonly recentes: readonly Notificacao[];
+}
+
 /** Problem Details (RFC 9457) devolvido pelo TratadorDeErros. */
 export interface Problema {
   readonly title?: string;

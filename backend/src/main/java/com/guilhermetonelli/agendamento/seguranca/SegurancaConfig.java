@@ -60,6 +60,7 @@ class SegurancaConfig {
                                 "/api/profissionais/*/jornada", "/api/profissionais/*/horarios-livres")
                         .permitAll()
                         .requestMatchers("/api/servicos/**", "/api/clientes").hasRole("ADMIN")
+                        .requestMatchers("/api/notificacoes/**").hasRole("PROFISSIONAL")
                         .requestMatchers(HttpMethod.POST, "/api/profissionais").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/profissionais/*", "/api/profissionais/*/servicos", "/api/profissionais/*/acesso")
                         .hasRole("ADMIN")

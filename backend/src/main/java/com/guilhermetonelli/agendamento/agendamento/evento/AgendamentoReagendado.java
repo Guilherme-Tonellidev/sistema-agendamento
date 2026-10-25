@@ -4,5 +4,5 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record AgendamentoReagendado(
-        UUID agendamentoId, UUID profissionalId, UUID clienteId, Instant inicioAnterior, Instant inicio, Instant fim)
+        UUID agendamentoId, UUID profissionalId, UUID clienteId, Instant inicioAnterior, Instant inicio, Instant fim, Aviso aviso)
         implements EventoDeAgendamento {}
