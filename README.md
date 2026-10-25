@@ -17,8 +17,9 @@ agendamentos sobrepostos para o mesmo profissional.
 | Documentação | OpenAPI (springdoc) e Swagger UI |
 | Banco de dados | PostgreSQL 18 |
 | Front-end | Angular 22 (signals, Signal Forms, sem zone.js), Vitest |
-| Mensageria e cache | RabbitMQ *(etapa 7)*, Redis *(etapa 9)* |
-| Testes | JUnit 5, AssertJ, Testcontainers |
+| Mensageria e e-mail | RabbitMQ, Spring Mail (Mailpit em desenvolvimento) |
+| Cache | Redis *(etapa 9)* |
+| Testes | JUnit 5, AssertJ, Testcontainers (PostgreSQL, RabbitMQ e Mailpit reais) |
 | Entrega | Docker, GitHub Actions |
 
 ## Como rodar
@@ -32,18 +33,26 @@ cd backend
 ./mvnw spring-boot:test-run
 ```
 
-O Spring sobe um PostgreSQL em container automaticamente e o desliga ao encerrar a aplicação.
+O Spring sobe PostgreSQL, RabbitMQ e Mailpit em contêineres e os desliga ao encerrar a aplicação.
+As portas são sorteadas (veja com `docker ps`); para abrir o painel do RabbitMQ e a caixa do Mailpit
+nos endereços fixos abaixo, use a opção 2.
 
 ### Opção 2: com Docker Compose
 
 ```bash
-docker compose up -d --wait   # espera o PostgreSQL ficar pronto
+docker compose up -d --wait   # espera PostgreSQL, RabbitMQ e Mailpit ficarem prontos
 cd backend
 ./mvnw spring-boot:run
 ```
 
 O PostgreSQL do Compose fica na porta **5433** do seu computador, para não disputar a 5432 com um
-PostgreSQL instalado direto no sistema (dá para trocar com a variável `POSTGRES_PORT`).
+PostgreSQL instalado direto no sistema (dá para trocar com a variável `POSTGRES_PORT`). Todas as
+portas do Compose ficam presas ao `127.0.0.1`: o usuário `guest` do RabbitMQ não é alcançável pela rede.
+
+| Serviço | Endereço | Para que serve |
+| --- | --- | --- |
+| RabbitMQ | <http://localhost:15672> (usuário e senha `guest`) | Filas, mensagens e as filas de erros (`.dlq`) |
+| Mailpit | <http://localhost:8025> | Caixa de entrada de mentira: recebe os e-mails sem enviar a ninguém |
 
 Confira em <http://localhost:8080/actuator/health> e veja a documentação da API em
 <http://localhost:8080/swagger-ui.html> (faça login em `/api/auth/login` e cole o token em **Authorize**).
@@ -62,6 +71,27 @@ Barba e Corte + barba), 2 barbeiros com jornada (Rafael Souza e Bruno Lima: de s
 
 Em produção nada disso roda; o administrador vem de `ADMIN_EMAIL` e `ADMIN_SENHA`. Na opção 1 o
 banco nasce vazio a cada execução; na opção 2, `docker compose down -v` apaga o banco para recomeçar.
+
+### Avisos de reserva
+
+Quem agiu já sabe: o aviso vai para a outra parte, e a reserva é a única exceção, porque o cliente
+recebe um comprovante.
+
+| Acontecimento | Cliente (e-mail) | Barbeiro (sino no cabeçalho) |
+| --- | --- | --- |
+| Reserva | Sempre, como comprovante | Sempre, exceto se ele mesmo marcou |
+| Remarcação ou cancelamento | Só se não foi o cliente que fez | Só se não foi o barbeiro que fez |
+
+Se o administrador agiu, os dois são avisados. Cliente sem e-mail (encaixe) nunca recebe e-mail.
+Para ver funcionando, com a opção 2, a API e o front no ar:
+
+1. Entre como Carlos e reserve um horário com o Rafael.
+2. Abra o Mailpit: o comprovante está lá.
+3. Entre como Rafael: o sino mostra 1 não lida; clicar nela abre a Agenda no dia da reserva.
+4. Cancele a reserva pela Agenda do Rafael: o e-mail de cancelamento chega ao Carlos.
+
+A API aceita um motivo no cancelamento (campo `motivo` de `PATCH /api/agendamentos/{id}/cancelar`) e ele
+aparece no e-mail e no sino; as telas não pedem esse campo.
 
 ### Front-end
 
@@ -99,13 +129,17 @@ cp .env.example .env   # troque POSTGRES_PASSWORD e preencha JWT_SEGREDO, ADMIN_
 docker compose -f docker-compose.prod.yml up -d --wait
 ```
 
-Sobe a API e o PostgreSQL com healthcheck; as migrações rodam sozinhas na inicialização.
+Sobe a API, o PostgreSQL e o RabbitMQ com healthcheck; as migrações rodam sozinhas na inicialização.
+O RabbitMQ não publica portas: só a API o alcança. Para ver as filas, incluindo as de erros:
+`docker compose -f docker-compose.prod.yml exec rabbitmq rabbitmqctl list_queues name messages`.
 Use `docker compose -f docker-compose.prod.yml pull` para atualizar para a imagem mais nova.
 
 **Em uma plataforma gerenciada** (Render, Railway, Fly.io...): rode a imagem acima (ou o
 `backend/Dockerfile`) com `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` apontando para um PostgreSQL 18,
 mais `JWT_SEGREDO` (obrigatório), `ADMIN_EMAIL`, `ADMIN_SENHA` e `CORS_ORIGENS`. O health check fica em
-`/actuator/health/readiness`. Sem `JWT_SEGREDO` a aplicação nem sobe, de propósito.
+`/actuator/health/readiness`. Sem `JWT_SEGREDO` a aplicação nem sobe, de propósito. Os avisos
+precisam também de um RabbitMQ (`SPRING_RABBITMQ_HOST`, `SPRING_RABBITMQ_USERNAME` e
+`SPRING_RABBITMQ_PASSWORD`) e de um servidor SMTP (`MAIL_*`, abaixo).
 
 ## Segurança
 
@@ -113,7 +147,7 @@ mais `JWT_SEGREDO` (obrigatório), `ADMIN_EMAIL`, `ADMIN_SENHA` e `CORS_ORIGENS`
 | --- | --- |
 | Visitante | Ver serviços, profissionais (sem e-mail e telefone) e horários livres; criar conta |
 | Cliente | Reservar, ver, cancelar e reagendar os **próprios** agendamentos; editar o próprio cadastro |
-| Profissional | Cuidar da **própria** jornada, bloqueios e agendamentos; concluir atendimentos e encaixar quem chegou sem reserva |
+| Profissional | Cuidar da **própria** jornada, bloqueios e agendamentos; concluir atendimentos e encaixar quem chegou sem reserva; ver as **próprias** notificações |
 | Administrador | Tudo, incluindo catálogo, profissionais e acesso deles |
 
 - **Login:** `POST /api/auth/login` devolve um **token de acesso** (JWT HS256, 15 min) no corpo e um
@@ -138,6 +172,7 @@ mais `JWT_SEGREDO` (obrigatório), `ADMIN_EMAIL`, `ADMIN_SENHA` e `CORS_ORIGENS`
 | Clientes | `POST /api/clientes` · `GET /api/clientes` · `GET/PUT /api/clientes/{id}` |
 | Disponibilidade | `GET/PUT /api/profissionais/{id}/jornada` · `POST/GET /api/profissionais/{id}/bloqueios` · `DELETE .../bloqueios/{bloqueioId}` · `GET /api/profissionais/{id}/horarios-livres?servicoId=&data=` · `GET .../horarios-livres/encaixe` |
 | Autenticação | `POST /api/auth/cadastro` · `POST /api/auth/login` · `POST /api/auth/refresh` · `POST /api/auth/logout` · `GET /api/auth/eu` |
+| Notificações | `GET /api/notificacoes` (as 20 mais recentes e quantas faltam ler) · `PATCH /api/notificacoes/{id}/ler` · `PATCH /api/notificacoes/ler-todas` |
 | Agendamentos | `POST /api/agendamentos` · `POST /api/agendamentos/encaixe` · `GET /api/agendamentos` · `GET /api/agendamentos/{id}` · `PATCH .../{id}/cancelar`, `/reagendar`, `/concluir` e `/nao-compareceu` |
 
 As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
@@ -167,8 +202,20 @@ As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate
 | `agendamento.antecedencia-minima-reserva` | `PT1H30M` | Prazo mínimo entre a reserva e o início do horário |
 | `agendamento.antecedencia-minima-cancelamento` | `PT2H` | Prazo mínimo para o cliente cancelar ou reagendar |
 | `agendamento.dados-de-exemplo` | `false` (`true` no perfil `local`) | Cadastra os [dados de exemplo](#dados-de-exemplo) num banco sem serviços |
+| `agendamento.notificacoes.remetente` | `Barbearia Tonelli <nao-responder@localhost>` | Remetente dos e-mails (`MAIL_REMETENTE`) |
 
 Todas podem vir de variáveis de ambiente (ex.: `AGENDAMENTO_FUSO_HORARIO`).
+
+E-mail e RabbitMQ (no perfil `local` já apontam para o Compose):
+
+| Variável | Padrão | Para que serve |
+| --- | --- | --- |
+| `MAIL_HOST` | vazio | Servidor SMTP. Vazio: a API sobe e só registra no log quem receberia cada e-mail |
+| `MAIL_PORT` | `587` | Porta do SMTP. Em produção a conexão exige STARTTLS |
+| `MAIL_USUARIO` e `MAIL_SENHA` | vazios | Credenciais do SMTP |
+| `MAIL_REMETENTE` | `Barbearia Tonelli <nao-responder@localhost>` | Remetente dos e-mails |
+| `SPRING_RABBITMQ_HOST` | `localhost` | Endereço do RabbitMQ (porta, usuário e senha: `SPRING_RABBITMQ_PORT`, `_USERNAME` e `_PASSWORD`; padrão `5672`, `guest`, `guest`) |
+
 Os erros seguem o padrão Problem Details (RFC 9457):
 
 ```json
@@ -208,6 +255,23 @@ Os erros seguem o padrão Problem Details (RFC 9457):
 - **Configuração por ambiente.** O perfil `local` traz os valores de desenvolvimento; em
   produção, tudo vem de variáveis de ambiente (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`) e os logs
   saem em JSON.
+- **Eventos publicados depois do commit.** A reserva grava e só então o evento vai para o RabbitMQ
+  (`@TransactionalEventListener(AFTER_COMMIT)`), então nenhum e-mail sai para uma reserva desfeita.
+  Se o broker estiver fora nesse instante, a reserva continua valendo e o aviso daquela vez se perde
+  (o erro fica no log). Cada etapa da conversa com o broker (conexão, handshake, canal e
+  confirmação) espera no máximo 2 s, então a requisição nunca fica presa. Se algum aviso passar a
+  ser crítico, o caminho é um *outbox* transacional: gravar o evento na mesma transação da reserva
+  e publicá-lo depois.
+- **Duas filas, uma por consumidor.** `email.cliente` e `notificacao.profissional` recebem os mesmos
+  eventos; a falha do SMTP não repete nem atrasa o sino, e vice-versa.
+- **Tentativas e fila de erros.** Cada consumidor tenta a mensagem 4 vezes, esperando 2 s, 6 s e 18 s;
+  depois ela vai para a `.dlq` da própria fila e fica lá para análise (reprocessar é manual, pelo
+  painel do RabbitMQ do Compose de desenvolvimento). Mensagem ilegível, ou com tipo fora do pacote dos eventos, vai direto para a
+  `.dlq`, sem tentativas.
+- **Entrega "pelo menos uma vez".** Se a aplicação cair depois de enviar o e-mail e antes de confirmar
+  a mensagem, o e-mail pode se repetir. Não há deduplicação.
+- **Sino por consulta.** O front pergunta pelas notificações a cada 30 s e ao voltar para a aba;
+  não há conexão aberta em tempo real.
 - **Imagem Docker enxuta.** Build em duas etapas, JAR extraído em camadas e execução sem usuário
   root.
 
@@ -221,7 +285,7 @@ Os erros seguem o padrão Problem Details (RFC 9457):
 - [ ] **4b. Login com Google**
 - [x] **5. Angular:** base, login e rotas protegidas
 - [x] **6. Telas do front-end:** serviços, minhas reservas e agenda do barbeiro com encaixe e bloqueio
-- [ ] **7. RabbitMQ:** eventos e e-mails de confirmação
+- [x] **7. RabbitMQ:** eventos de agendamento, e-mails ao cliente e sino de notificações do barbeiro
 - [ ] **8. Quartz:** lembretes 24h antes
 - [ ] **9. Redis:** cache de horários e limite de tentativas de login
 - [ ] **10. Painel do administrador:** visão da semana com FullCalendar e histórico com Hibernate Envers
