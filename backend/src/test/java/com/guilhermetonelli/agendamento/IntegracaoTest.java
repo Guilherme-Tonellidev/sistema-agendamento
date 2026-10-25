@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestClient;
 
 import com.guilhermetonelli.agendamento.seguranca.EmissorDeTokens;
@@ -19,15 +20,20 @@ import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
 
 /**
  * Base dos testes de integração: aplicação completa numa porta aleatória, PostgreSQL real,
- * relógio controlado, eventos registrados e banco limpo antes de cada teste.
+ * relógio controlado, eventos registrados e banco, filas e caixa de e-mail limpos antes de cada teste.
  *
  * <p>{@link #api} fala como administrador. Os testes de autorização usam {@link #apiComo} e {@link #apiAnonima}.
  *
  * <p>Todas as classes que estendem esta compartilham o mesmo contexto do Spring e o mesmo
- * container, então o PostgreSQL sobe uma vez só por execução.
+ * container, então PostgreSQL, RabbitMQ e Mailpit sobem uma vez só por execução.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import({TestcontainersConfiguration.class, RelogioDeTeste.class, EventosPublicados.class})
+@TestPropertySource(properties = {
+    "spring.rabbitmq.listener.simple.retry.initial-interval=50ms",
+    "spring.rabbitmq.listener.simple.retry.multiplier=1",
+    "spring.rabbitmq.listener.simple.retry.max-interval=50ms"
+})
+@Import({TestcontainersConfiguration.class, RelogioDeTeste.class, EventosPublicados.class, Filas.class, Mailpit.class, EnviadorQueFalha.class})
 public abstract class IntegracaoTest {
 
     @Value("${local.server.port}")
@@ -43,6 +49,15 @@ public abstract class IntegracaoTest {
     protected EventosPublicados eventos;
 
     @Autowired
+    protected Filas filas;
+
+    @Autowired
+    protected Mailpit mailpit;
+
+    @Autowired
+    protected EnviadorQueFalha enviador;
+
+    @Autowired
     private EmissorDeTokens emissor;
 
     /** Cliente HTTP da API como administrador. Respostas de erro não lançam exceção, para o teste conferir o status. */
@@ -50,7 +65,12 @@ public abstract class IntegracaoTest {
 
     @BeforeEach
     protected void prepararAmbiente() {
+        enviador.falharSempre(false);
+        filas.pararConsumidores();
         limparBanco();
+        filas.purgar();
+        filas.religarConsumidores();
+        mailpit.limpar();
         relogio.reiniciar();
         eventos.limpar();
         api = apiComo(new UsuarioLogado(UUID.randomUUID(), Papel.ADMIN, null, null));

@@ -4,3 +4,9 @@ logging:
     format:
       # Logs em JSON, prontos para ferramentas de busca e monitoramento.
       console: ecs
+
+spring:
+  mail:
+    properties:
+      # Em produção as credenciais do e-mail nunca trafegam sem TLS.
+      mail.smtp.starttls.required: true

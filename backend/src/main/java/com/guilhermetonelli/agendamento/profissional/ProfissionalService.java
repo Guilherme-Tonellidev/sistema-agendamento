@@ -88,6 +88,10 @@ public class ProfissionalService {
         return repository.findParaAtualizarById(id).orElseThrow(() -> naoEncontrado(id));
     }
 
+    public boolean existe(UUID id) {
+        return repository.existsById(id);
+    }
+
     public void garantirQueExiste(UUID id) {
         if (!repository.existsById(id)) {
             throw naoEncontrado(id);

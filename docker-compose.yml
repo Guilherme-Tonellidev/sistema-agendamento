@@ -1,5 +1,5 @@
 # Infraestrutura de desenvolvimento. Cada serviço entra quando a etapa do roadmap precisar dele
-# (RabbitMQ na etapa 7, Redis na 9, Mailpit junto com o e-mail).
+# (Redis na etapa 9).
 name: agendamento
 
 services:
@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agendamento}
     ports:
       # 5433 no computador: a 5432 costuma ser de um PostgreSQL instalado direto no sistema.
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       # A partir do PostgreSQL 18, o volume é montado em /var/lib/postgresql.
       - postgres-data:/var/lib/postgresql
@@ -21,5 +21,37 @@ services:
       timeout: 3s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    # O RabbitMQ guarda os dados numa pasta com o nome do nó (rabbit@<hostname>): com o nome fixo, recriar o
+    # contêiner reaproveita o volume e as filas (inclusive a de erros).
+    hostname: rabbitmq
+    ports:
+      # Só neste computador: o usuário guest e a senha guest não podem ficar abertos para a rede.
+      - "127.0.0.1:5672:5672"
+      # Painel de administração (filas, mensagens, fila de erros): http://localhost:15672, usuário e senha guest.
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Servidor de e-mail de mentira: recebe tudo e mostra numa caixa de entrada, sem enviar a ninguém.
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "127.0.0.1:1025:1025"
+      # Caixa de entrada: http://localhost:8025
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   postgres-data:
+  rabbitmq-data:

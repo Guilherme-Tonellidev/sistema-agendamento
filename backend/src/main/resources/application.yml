@@ -28,6 +28,35 @@ spring:
   flyway:
     locations: classpath:db/migration
 
+  rabbitmq:
+    # Broker parado ou travado não segura a requisição: conectar, handshake (MensageriaConfig), abrir e fechar
+    # canal e esperar a confirmação têm limite de 2 s cada.
+    connection-timeout: 2s
+    channel-rpc-timeout: 2s
+    publisher-confirm-type: correlated
+    listener:
+      simple:
+        retry:
+          # 1 tentativa + 3 repetições, esperando 2 s, 6 s e 18 s; depois a mensagem vai para a fila de erros (.dlq).
+          enabled: true
+          max-retries: 3
+          initial-interval: 2s
+          multiplier: 3
+          max-interval: 18s
+
+  mail:
+    # Sem MAIL_HOST a aplicação sobe e só registra no log quem receberia cada e-mail.
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USUARIO:}
+    password: ${MAIL_SENHA:}
+    properties:
+      # Um SMTP lento não pode prender o consumidor: falhou em 3 s, entra nas tentativas.
+      mail.smtp.connectiontimeout: 3000
+      mail.smtp.timeout: 3000
+      mail.smtp.writetimeout: 3000
+      mail.smtp.starttls.enable: true
+
   data:
     web:
       pageable:
@@ -58,12 +87,22 @@ seguranca:
   admin-email: ${ADMIN_EMAIL:}
   admin-senha: ${ADMIN_SENHA:}
 
+agendamento:
+  notificacoes:
+    remetente: ${MAIL_REMETENTE:Barbearia Tonelli <nao-responder@localhost>}
+
 springdoc:
   swagger-ui:
     tags-sorter: alpha
     operations-sorter: method
 
 management:
+  health:
+    # Broker ou SMTP fora do ar não derrubam a API: a reserva continua funcionando, só os avisos param.
+    rabbit:
+      enabled: false
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:
