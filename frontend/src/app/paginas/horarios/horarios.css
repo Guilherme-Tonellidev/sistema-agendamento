@@ -97,15 +97,15 @@
   color: var(--dourado-botao);
 }
 
+/* Os 7 dias ficam sempre numa linha: encolhem no celular e passam de 60px só se sobrar espaço. */
 .dias {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 60px));
   gap: 8px;
 }
 
 .dia {
-  min-width: 60px;
-  padding: clamp(5px, 1.2dvh, 8px) 12px;
+  padding: clamp(5px, 1.2dvh, 8px) 0;
   border: 0;
   border-radius: 12px;
   background: transparent;

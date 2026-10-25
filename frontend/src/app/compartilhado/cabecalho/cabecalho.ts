@@ -4,6 +4,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Papel } from '../../core/api/modelos';
 import { Sessao } from '../../core/autenticacao/sessao';
 import { Marca } from '../marca/marca';
+import { Sino } from '../sino/sino';
 
 interface Link {
   readonly rota: string;
@@ -21,7 +22,7 @@ const DO_PAPEL: Record<Papel, Link> = {
 
 @Component({
   selector: 'app-cabecalho',
-  imports: [RouterLink, RouterLinkActive, Marca],
+  imports: [RouterLink, RouterLinkActive, Marca, Sino],
   templateUrl: './cabecalho.html',
   styleUrl: './cabecalho.css',
 })
@@ -32,6 +33,7 @@ export class Cabecalho {
     const papel = this.sessao.usuario()?.papel;
     return papel ? [SERVICOS, DO_PAPEL[papel]] : [SERVICOS];
   });
+  protected readonly ehBarbeiro = computed(() => this.sessao.usuario()?.papel === 'PROFISSIONAL');
   protected readonly inicial = computed(
     () => this.sessao.usuario()?.email.charAt(0).toUpperCase() ?? '',
   );

@@ -1,5 +1,6 @@
 /* Em telas baixas (notebook, zoom do navegador) o cabeçalho encolhe para sobrar espaço à página. */
 .cabecalho {
+  position: relative;
   min-height: clamp(60px, 12dvh, 76px);
   display: flex;
   align-items: center;
@@ -116,5 +117,12 @@ nav a.ativo {
   .conta {
     grid-area: conta;
     gap: 20px;
+  }
+}
+
+/* Em telas muito estreitas o sino e o "Sair" precisam do lugar do avatar, que é só enfeite. */
+@media (max-width: 380px) {
+  .avatar {
+    display: none;
   }
 }

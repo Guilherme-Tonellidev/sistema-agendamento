@@ -1,0 +1,60 @@
+<button
+  #botao
+  type="button"
+  class="sino"
+  [attr.aria-label]="descricao()"
+  [attr.aria-expanded]="aberto()"
+  [attr.aria-controls]="aberto() ? 'notificacoes' : null"
+  (click)="alternar()"
+>
+  <svg
+    viewBox="0 0 24 24"
+    width="22"
+    height="22"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z" />
+    <path d="M10 21a2 2 0 0 0 4 0" />
+  </svg>
+  @if (contador()) {
+    <span class="contador" aria-hidden="true">{{ contador() }}</span>
+  }
+</button>
+
+@if (aberto()) {
+  <section id="notificacoes" class="painel" aria-label="Notificações">
+    <div class="topo">
+      <h2>Notificações</h2>
+      @if (temNaoLidas()) {
+        <button type="button" class="todas" (click)="marcarTodas()">Marcar todas como lidas</button>
+      }
+    </div>
+    <div class="picote" aria-hidden="true"><span></span></div>
+    @if (recentes().length) {
+      <ul class="lista">
+        @for (notificacao of recentes(); track notificacao.id) {
+          <li>
+            <button
+              type="button"
+              class="item"
+              [class.nao-lida]="!notificacao.lida"
+              (click)="abrir(notificacao)"
+            >
+              @if (!notificacao.lida) {
+                <span class="so-leitor">Não lida. </span>
+              }
+              {{ notificacao.texto }}
+            </button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="vazio">Nenhuma notificação por enquanto.</p>
+    }
+  </section>
+}

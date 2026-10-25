@@ -1,8 +1,7 @@
 # Front-end · Barbearia Tonelli
 
-Angular 22 consumindo a API do [`backend`](../backend). Telas: serviços, escolher horário, entrar,
-criar conta, minhas reservas e a agenda do barbeiro (as contas de exemplo estão no
-[README da raiz](../README.md#dados-de-exemplo)).
+Angular 22 consumindo a API do [`backend`](../backend). Por enquanto: entrar, criar conta e
+escolher horário; as demais telas chegam no decorrer da etapa 5.
 
 ## Como rodar
 
@@ -25,8 +24,8 @@ front e API ficam na mesma origem e o cookie do refresh token funciona sem CORS.
 
 ```text
 src/app/
-├── core/           sessão, interceptors, guardas, contratos da API, datas e horário da casa
-├── compartilhado/  vitrine, cabeçalho, ticket, marca, barra de carregamento, formatos e telefone
+├── core/           sessão, interceptors, guardas, contratos da API, datas, horário da casa e notificações
+├── compartilhado/  vitrine, cabeçalho, sino, ticket, marca e barra de carregamento
 └── paginas/        uma pasta por tela
 ```
 
@@ -41,9 +40,7 @@ src/app/
 - **"Sem preferência" de barbeiro:** o front junta os horários livres de cada um e oferece o
   primeiro livre em cada horário.
 - **Trocar de dia não pisca a tela:** a grade anterior fica esmaecida até a nova chegar.
-- **Prazos da casa na tela:** cancelar e remarcar só aparecem enquanto faltam mais de 2h; depois,
-  a reserva diz para falar com a barbearia.
-- **A agenda do barbeiro é a fila do dia, não um calendário:** quem está na cadeira, os próximos,
-  os vãos livres e os bloqueios, recalculados a cada minuto. Encaixe e bloqueio saem dali mesmo.
-- **WhatsApp com a mensagem pronta:** links `wa.me` para chamar o cliente ou avisar de um
-  cancelamento, com o dia e o horário no texto.
+- **Sino do barbeiro por consulta.** O serviço `Notificacoes` pergunta a `/api/notificacoes` a cada
+  30 s com a aba à vista e ao voltar para ela, só enquanto há um barbeiro logado. Notificação nova
+  também recarrega a fila da Agenda. Sem WebSocket: o aviso só precisa chegar em alguns segundos, e
+  a consulta não exige um segundo canal em tempo real no back-end.
