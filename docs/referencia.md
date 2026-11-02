@@ -18,9 +18,10 @@ desenvolvimento: o perfil `prod` desliga o Swagger UI e o `/v3/api-docs`.
 | Agendamentos | `POST /api/agendamentos` · `POST /api/agendamentos/encaixe` · `GET /api/agendamentos` · `GET /api/agendamentos/{id}` · `PATCH .../{id}/cancelar`, `/reagendar`, `/concluir` e `/nao-compareceu` |
 
 `POST /api/auth/login` responde `429` (com `Retry-After`, em segundos) depois de 5 tentativas em 15 minutos para o mesmo
-e-mail e a mesma origem; um login correto zera a contagem. A origem é o endereço da conexão: atrás de um proxy reverso
-ela é a do proxy, então configure o servidor para confiar no `X-Forwarded-For` dele (e só nele) ou o limite passa a valer
-por e-mail para todos.
+e-mail e a mesma origem; um login correto zera a contagem. A contagem fica no Redis e vale entre as instâncias da API;
+com o Redis fora do ar, o login segue e cada instância conta por conta própria, na memória. A origem é o endereço da
+conexão: atrás de um proxy reverso ela é a do proxy, então configure o servidor para confiar no `X-Forwarded-For` dele
+(e só nele) ou o limite passa a valer por e-mail para todos.
 
 As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
 (`page`, `size`, `sort`). Nas listagens públicas de serviços e profissionais, quem não é administrador só vê itens
@@ -89,7 +90,7 @@ ou mais (o mínimo para reservar é 1h30). O lembrete aparece no Mailpit 2 h ant
 
 Todas podem vir de variáveis de ambiente (ex.: `AGENDAMENTO_FUSO_HORARIO`).
 
-E-mail e RabbitMQ (no perfil `local` já apontam para o Compose):
+E-mail, RabbitMQ e Redis (no perfil `local` já apontam para o Compose):
 
 | Variável | Padrão | Para que serve |
 | --- | --- | --- |
@@ -98,6 +99,9 @@ E-mail e RabbitMQ (no perfil `local` já apontam para o Compose):
 | `MAIL_USUARIO` e `MAIL_SENHA` | vazios | Credenciais do SMTP |
 | `MAIL_REMETENTE` | `Barbearia Tonelli <nao-responder@localhost>` | Remetente dos e-mails |
 | `SPRING_RABBITMQ_HOST` | `localhost` | Endereço do RabbitMQ (porta, usuário e senha: `SPRING_RABBITMQ_PORT`, `_USERNAME` e `_PASSWORD`; padrão `5672`, `guest`, `guest`) |
+| `SPRING_DATA_REDIS_HOST` | `localhost` | Endereço do Redis (porta: `SPRING_DATA_REDIS_PORT`, padrão `6379`) |
+| `SPRING_DATA_REDIS_PASSWORD` | vazio | Senha do Redis. Em produção a API a recebe do `REDIS_PASSWORD` do Compose |
+| `REDIS_PASSWORD` | sem padrão | Só no `docker-compose.prod.yml` e obrigatória: a senha que o Compose define no Redis e entrega à API |
 
 Os erros seguem o padrão Problem Details (RFC 9457):
 
@@ -118,12 +122,12 @@ A cada push na `main` com o CI verde, o workflow `release.yml` publica a imagem
 **Em qualquer servidor com Docker:**
 
 ```bash
-cp .env.example .env   # troque POSTGRES_PASSWORD e preencha JWT_SEGREDO, ADMIN_EMAIL e ADMIN_SENHA
+cp .env.example .env   # troque POSTGRES_PASSWORD e preencha JWT_SEGREDO, ADMIN_EMAIL, ADMIN_SENHA, RABBITMQ_DEFAULT_PASS e REDIS_PASSWORD
 docker compose -f docker-compose.prod.yml up -d --wait
 ```
 
-Sobe a API, o PostgreSQL e o RabbitMQ com healthcheck; as migrações rodam sozinhas na inicialização.
-O RabbitMQ não publica portas: só a API o alcança. Para ver as filas, incluindo as de erros:
+Sobe a API, o PostgreSQL, o RabbitMQ e o Redis com healthcheck; as migrações rodam sozinhas na inicialização.
+O RabbitMQ e o Redis não publicam portas: só a API os alcança. Para ver as filas, incluindo as de erros:
 `docker compose -f docker-compose.prod.yml exec rabbitmq rabbitmqctl list_queues name messages`.
 Use `docker compose -f docker-compose.prod.yml pull` para atualizar para a imagem mais nova.
 
@@ -134,10 +138,12 @@ mais `JWT_SEGREDO` (obrigatório), `ADMIN_EMAIL`, `ADMIN_SENHA` e `CORS_ORIGENS`
 `SPRING_PROFILES_ACTIVE=prod`, e o perfil `local` nunca deve ser ativado em produção, porque cadastra contas com senhas
 conhecidas. Os avisos
 precisam também de um RabbitMQ (`SPRING_RABBITMQ_HOST`, `SPRING_RABBITMQ_USERNAME` e
-`SPRING_RABBITMQ_PASSWORD`) e de um servidor SMTP (`MAIL_*`, abaixo).
+`SPRING_RABBITMQ_PASSWORD`), de um servidor SMTP (`MAIL_*`, abaixo) e de um Redis (`SPRING_DATA_REDIS_HOST` e, se ele
+tiver senha, `SPRING_DATA_REDIS_PASSWORD`). Sem o Redis a API segue de pé: o limite de login passa a contar só na memória
+de cada instância.
 
 ## Docker Compose de desenvolvimento
 
 O PostgreSQL do Compose fica na porta 5433 do seu computador, para não disputar a 5432 com um PostgreSQL instalado direto no
 sistema (dá para trocar com a variável `POSTGRES_PORT`). Todas as portas do Compose ficam presas ao `127.0.0.1`: o usuário `guest`
-do RabbitMQ não é alcançável pela rede.
+do RabbitMQ e o Redis, que lá não tem senha, não são alcançáveis pela rede.

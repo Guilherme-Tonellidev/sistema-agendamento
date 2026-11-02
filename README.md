@@ -27,14 +27,14 @@ dados garante que nunca existam dois agendamentos sobrepostos para o mesmo profi
 | Banco de dados | PostgreSQL 18 |
 | Mensageria e agendador | RabbitMQ, Quartz (armazenamento JDBC), Spring Mail (Mailpit em desenvolvimento) |
 | Front-end | Angular 22 (signals, sem zone.js), Vitest |
-| Testes | JUnit, AssertJ, Testcontainers (PostgreSQL, RabbitMQ e Mailpit reais) |
+| Testes | JUnit, AssertJ, Testcontainers (PostgreSQL, RabbitMQ, Redis e Mailpit reais) |
 | Entrega | Docker, GitHub Actions |
 
 ## Como rodar
 
 Pré-requisitos: JDK 21, Docker Desktop e, para o front-end, Node.js 24.
 
-Opção 1, a mais simples. O Testcontainers sobe PostgreSQL, RabbitMQ e Mailpit sozinho, em portas sorteadas:
+Opção 1, a mais simples. O Testcontainers sobe PostgreSQL, RabbitMQ, Redis e Mailpit sozinho, em portas sorteadas:
 
 ```bash
 cd backend
@@ -113,7 +113,7 @@ flowchart LR
 - Login com token de acesso JWT de 15 min, guardado só em memória no front, e refresh token num cookie `HttpOnly` com `SameSite=Strict`.
 - Cada renovação troca o refresh token. Se um token já trocado aparecer de novo, todas as sessões daquela família são revogadas.
 - No banco ficam só hashes: BCrypt nas senhas e SHA-256 nos refresh tokens.
-- O login aceita 5 tentativas por janela de 15 minutos para cada par e-mail + origem; a seguinte recebe `429` com `Retry-After`. A contagem fica na memória da instância; com várias instâncias, o item do Redis abaixo a compartilha.
+- O login aceita 5 tentativas por janela de 15 minutos para cada par e-mail + origem; a seguinte recebe `429` com `Retry-After`. A contagem fica no Redis e vale entre instâncias; com o Redis fora do ar, o login segue e cada instância conta por conta própria, na memória.
 - Login inválido tem sempre a mesma mensagem e o mesmo tempo de resposta. Agendamento de outra pessoa responde `404`.
 - Toda rota exige login, exceto as públicas. As regras de dono ficam nos services, com testes para cada papel.
 
@@ -127,7 +127,7 @@ flowchart LR
 - O preço fica congelado na reserva. Serviços e profissionais são inativados, não apagados.
 - Erros no padrão Problem Details (RFC 9457), com `404`, `409` e `422`.
 - Quartz no PostgreSQL, em cluster: com duas instâncias da API, só uma varre por vez.
-- Testes com PostgreSQL, RabbitMQ e Mailpit reais (Testcontainers), sem H2.
+- Testes com PostgreSQL, RabbitMQ, Redis e Mailpit reais (Testcontainers), sem H2.
 
 Endpoints, regras de reserva, avisos, configuração e deploy: [`docs/referencia.md`](docs/referencia.md).
 
