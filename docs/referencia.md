@@ -4,7 +4,8 @@ Detalhes que não cabem no [README](../README.md): API, regras de reserva, aviso
 
 ## API
 
-A documentação interativa (Swagger UI) fica em <http://localhost:8080/swagger-ui.html> com a API no ar.
+A documentação interativa (Swagger UI) fica em <http://localhost:8080/swagger-ui.html> com a API no ar. Ela só existe em
+desenvolvimento: o perfil `prod` desliga o Swagger UI e o `/v3/api-docs`.
 
 | Recurso | Endpoints |
 | --- | --- |
