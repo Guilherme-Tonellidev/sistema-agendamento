@@ -3,99 +3,53 @@
 [![Backend CI](https://github.com/Guilherme-Tonellidev/sistema-agendamento/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/Guilherme-Tonellidev/sistema-agendamento/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/Guilherme-Tonellidev/sistema-agendamento/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/Guilherme-Tonellidev/sistema-agendamento/actions/workflows/frontend-ci.yml)
 
-Plataforma de agendamento de serviços (barbearia, clínica, salas): profissionais definem sua
-disponibilidade, clientes reservam horários e o sistema garante que nunca existam dois
-agendamentos sobrepostos para o mesmo profissional.
+Agendamento de horários para uma barbearia. O cliente reserva, o barbeiro cuida da agenda e o banco de
+dados garante que nunca existam dois agendamentos sobrepostos para o mesmo profissional.
 
-> Projeto em desenvolvimento. O roadmap abaixo mostra o que já está pronto.
+![Cliente escolhe serviço, dia e horário e reserva](docs/img/reserva.gif)
+
+| Agenda do barbeiro | Minhas reservas |
+| --- | --- |
+| ![Agenda do dia com horários livres e encaixe](docs/img/agenda-do-barbeiro.png) | ![Reservas do cliente com cancelar e remarcar](docs/img/minhas-reservas.png) |
+
+## O que faz
+
+- Calcula os horários livres de cada barbeiro a partir da jornada semanal, das folgas e das reservas ativas.
+- O cliente reserva (com 1h30 de antecedência), remarca e cancela (até 2 h antes). O barbeiro encaixa quem chega sem reserva, bloqueia horários e conclui atendimentos. O administrador cuida do catálogo e do acesso dos barbeiros.
+- Avisa por e-mail (comprovante, remarcação, cancelamento e lembrete) e, para o barbeiro, pelo sino do cabeçalho.
+- Manda um lembrete 24 h antes do horário, ou 1 h antes para quem reservou com menos de 24 h.
 
 ## Stack
 
 | Camada | Tecnologias |
 | --- | --- |
-| Back-end | Java 21, Spring Boot 4, Spring Security (JWT), Spring Data JPA, Bean Validation, MapStruct, Flyway |
-| Documentação | OpenAPI (springdoc) e Swagger UI |
+| Back-end | Java 21, Spring Boot 4, Spring Security (JWT), Spring Data JPA, MapStruct, Flyway, OpenAPI (Swagger UI) |
 | Banco de dados | PostgreSQL 18 |
-| Front-end | Angular 22 (signals, Signal Forms, sem zone.js), Vitest |
-| Mensageria e e-mail | RabbitMQ, Spring Mail (Mailpit em desenvolvimento) |
-| Cache | Redis *(etapa 9)* |
-| Testes | JUnit 5, AssertJ, Testcontainers (PostgreSQL, RabbitMQ e Mailpit reais) |
+| Mensageria e agendador | RabbitMQ, Quartz (armazenamento JDBC), Spring Mail (Mailpit em desenvolvimento) |
+| Front-end | Angular 22 (signals, sem zone.js), Vitest |
+| Testes | JUnit, AssertJ, Testcontainers (PostgreSQL, RabbitMQ e Mailpit reais) |
 | Entrega | Docker, GitHub Actions |
 
 ## Como rodar
 
-**Pré-requisitos:** JDK 21, Docker Desktop e, para o front-end, Node.js 24.
+Pré-requisitos: JDK 21, Docker Desktop e, para o front-end, Node.js 24.
 
-### Opção 1: só com Testcontainers (mais simples)
+Opção 1, a mais simples. O Testcontainers sobe PostgreSQL, RabbitMQ e Mailpit sozinho, em portas sorteadas:
 
 ```bash
 cd backend
 ./mvnw spring-boot:test-run
 ```
 
-O Spring sobe PostgreSQL, RabbitMQ e Mailpit em contêineres e os desliga ao encerrar a aplicação.
-As portas são sorteadas (veja com `docker ps`); para abrir o painel do RabbitMQ e a caixa do Mailpit
-nos endereços fixos abaixo, use a opção 2.
-
-### Opção 2: com Docker Compose
+Opção 2, com endereços fixos (Docker Compose):
 
 ```bash
-docker compose up -d --wait   # espera PostgreSQL, RabbitMQ e Mailpit ficarem prontos
+docker compose up -d --wait
 cd backend
 ./mvnw spring-boot:run
 ```
 
-O PostgreSQL do Compose fica na porta **5433** do seu computador, para não disputar a 5432 com um
-PostgreSQL instalado direto no sistema (dá para trocar com a variável `POSTGRES_PORT`). Todas as
-portas do Compose ficam presas ao `127.0.0.1`: o usuário `guest` do RabbitMQ não é alcançável pela rede.
-
-| Serviço | Endereço | Para que serve |
-| --- | --- | --- |
-| RabbitMQ | <http://localhost:15672> (usuário e senha `guest`) | Filas, mensagens e as filas de erros (`.dlq`) |
-| Mailpit | <http://localhost:8025> | Caixa de entrada de mentira: recebe os e-mails sem enviar a ninguém |
-
-Confira em <http://localhost:8080/actuator/health> e veja a documentação da API em
-<http://localhost:8080/swagger-ui.html> (faça login em `/api/auth/login` e cole o token em **Authorize**).
-
-### Dados de exemplo
-
-Em desenvolvimento, a primeira subida com o banco ainda sem serviços cadastra 3 serviços (Corte,
-Barba e Corte + barba), 2 barbeiros com jornada (Rafael Souza e Bruno Lima: de segunda a sexta das
-9h às 12h e das 13h às 20h, sábado das 8h às 18h) e estas contas:
-
-| Papel | E-mail | Senha |
-| --- | --- | --- |
-| Administrador | `admin@agendamento.local` | `admin-local-123` |
-| Barbeiro (Rafael) | `rafael@tonelli.local` | `barbeiro-local-123` |
-| Cliente | `carlos@tonelli.local` | `cliente-local-123` |
-
-Em produção nada disso roda; o administrador vem de `ADMIN_EMAIL` e `ADMIN_SENHA`. Na opção 1 o
-banco nasce vazio a cada execução; na opção 2, `docker compose down -v` apaga o banco para recomeçar.
-
-### Avisos de reserva
-
-Quem agiu já sabe: o aviso vai para a outra parte, e a reserva é a única exceção, porque o cliente
-recebe um comprovante.
-
-| Acontecimento | Cliente (e-mail) | Barbeiro (sino no cabeçalho) |
-| --- | --- | --- |
-| Reserva | Sempre, como comprovante | Sempre, exceto se ele mesmo marcou |
-| Remarcação ou cancelamento | Só se não foi o cliente que fez | Só se não foi o barbeiro que fez |
-
-Se o administrador agiu, os dois são avisados. Cliente sem e-mail (encaixe) nunca recebe e-mail.
-Para ver funcionando, com a opção 2, a API e o front no ar:
-
-1. Entre como Carlos e reserve um horário com o Rafael.
-2. Abra o Mailpit: o comprovante está lá.
-3. Entre como Rafael: o sino mostra 1 não lida; clicar nela abre a Agenda no dia da reserva.
-4. Cancele a reserva pela Agenda do Rafael: o e-mail de cancelamento chega ao Carlos.
-
-A API aceita um motivo no cancelamento (campo `motivo` de `PATCH /api/agendamentos/{id}/cancelar`) e ele
-aparece no e-mail e no sino; as telas não pedem esse campo.
-
-### Front-end
-
-Com a API no ar (qualquer opção acima), em outro terminal:
+Front-end, com a API no ar:
 
 ```bash
 cd frontend
@@ -103,177 +57,74 @@ npm install
 npm start
 ```
 
-Abra <http://localhost:4200>. Mais detalhes em [`frontend/README.md`](frontend/README.md).
+Mais detalhes em [`frontend/README.md`](frontend/README.md).
+
+| Serviço | Endereço |
+| --- | --- |
+| Front-end | <http://localhost:4200> |
+| API e Swagger UI | <http://localhost:8080/swagger-ui.html> |
+| Caixa de e-mails (Mailpit, opção 2) | <http://localhost:8025> |
+| RabbitMQ (opção 2) | <http://localhost:15672> (`guest` / `guest`) |
+
+### Dados de exemplo
+
+Em desenvolvimento, a primeira subida com o banco vazio cadastra 3 serviços, 2 barbeiros com jornada e estas contas. Em produção nada disso é cadastrado. Para recomeçar com o banco vazio na opção 2, use `docker compose down -v`.
+
+| Papel | E-mail | Senha |
+| --- | --- | --- |
+| Administrador | `admin@agendamento.local` | `admin-local-123` |
+| Barbeiro | `rafael@tonelli.local` | `barbeiro-local-123` |
+| Cliente | `carlos@tonelli.local` | `cliente-local-123` |
 
 ### Testes
 
 ```bash
-cd backend
-./mvnw verify
-
-cd ../frontend
-npm test
+cd backend && ./mvnw verify
+cd frontend && npm test
 ```
 
-> No Windows, use `mvnw.cmd` no lugar de `./mvnw` se não estiver no Git Bash.
+No Windows, use `mvnw.cmd` no lugar de `./mvnw` se não estiver no Git Bash.
 
-## Deploy
+## Como funciona
 
-A cada push na `main` com o CI verde, o workflow `release.yml` publica a imagem
-`ghcr.io/guilherme-tonellidev/sistema-agendamento-api` (tags `latest` e o SHA do commit).
-
-**Em qualquer servidor com Docker:**
-
-```bash
-cp .env.example .env   # troque POSTGRES_PASSWORD e preencha JWT_SEGREDO, ADMIN_EMAIL e ADMIN_SENHA
-docker compose -f docker-compose.prod.yml up -d --wait
+```mermaid
+flowchart LR
+    API["API: reserva, remarcação, cancelamento"] -->|depois do commit| MQ{{RabbitMQ}}
+    JOB["Job do Quartz, a cada minuto"] -->|lembretes vencidos| MQ
+    MQ --> FE["fila email.cliente"] --> EM["E-mail ao cliente"]
+    MQ --> FN["fila notificacao.profissional"] --> SI["Sino do barbeiro"]
+    FE -.->|4 falhas| D1["email.cliente.dlq"]
+    FN -.->|4 falhas| D2["notificacao.profissional.dlq"]
 ```
 
-Sobe a API, o PostgreSQL e o RabbitMQ com healthcheck; as migrações rodam sozinhas na inicialização.
-O RabbitMQ não publica portas: só a API o alcança. Para ver as filas, incluindo as de erros:
-`docker compose -f docker-compose.prod.yml exec rabbitmq rabbitmqctl list_queues name messages`.
-Use `docker compose -f docker-compose.prod.yml pull` para atualizar para a imagem mais nova.
+- O evento só vai para o RabbitMQ depois do commit da reserva, então nenhum e-mail sai para uma reserva desfeita. Se o broker estiver fora nesse instante, a reserva continua valendo e o aviso daquela vez se perde (o erro fica no log).
+- Cada fila tem seu consumidor, então uma falha do SMTP não atrasa o sino. Cada mensagem é tentada 4 vezes (2 s, 6 s e 18 s de espera) e depois vai para a `.dlq`, de onde só se reprocessa à mão, pelo painel do RabbitMQ.
+- A entrega é "pelo menos uma vez": uma queda entre o envio e a confirmação pode repetir um e-mail.
+- Cada agendamento guarda quando deve ser lembrado. O job do Quartz publica os lembretes vencidos e só marca o envio depois que o broker confirma. Remarcar ou cancelar só muda essas colunas.
 
-**Em uma plataforma gerenciada** (Render, Railway, Fly.io...): rode a imagem acima (ou o
-`backend/Dockerfile`) com `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` apontando para um PostgreSQL 18,
-mais `JWT_SEGREDO` (obrigatório), `ADMIN_EMAIL`, `ADMIN_SENHA` e `CORS_ORIGENS`. O health check fica em
-`/actuator/health/readiness`. Sem `JWT_SEGREDO` a aplicação nem sobe, de propósito. Os avisos
-precisam também de um RabbitMQ (`SPRING_RABBITMQ_HOST`, `SPRING_RABBITMQ_USERNAME` e
-`SPRING_RABBITMQ_PASSWORD`) e de um servidor SMTP (`MAIL_*`, abaixo).
+![E-mail de lembrete](docs/img/email-lembrete.png)
 
 ## Segurança
 
-| Quem | Pode |
-| --- | --- |
-| Visitante | Ver serviços, profissionais (sem e-mail e telefone) e horários livres; criar conta |
-| Cliente | Reservar, ver, cancelar e reagendar os **próprios** agendamentos; editar o próprio cadastro |
-| Profissional | Cuidar da **própria** jornada, bloqueios e agendamentos; concluir atendimentos e encaixar quem chegou sem reserva; ver as **próprias** notificações |
-| Administrador | Tudo, incluindo catálogo, profissionais e acesso deles |
-
-- **Login:** `POST /api/auth/login` devolve um **token de acesso** (JWT HS256, 15 min) no corpo e um
-  **refresh token** num cookie `HttpOnly`, `SameSite=Strict`, restrito a `/api/auth`. O front guarda o
-  token de acesso só em memória; `POST /api/auth/refresh` renova e `POST /api/auth/logout` encerra.
-- **Rotação com detecção de roubo:** cada renovação troca o refresh token. Se um token já trocado
-  aparecer de novo, alguém o copiou, e todas as sessões daquela família são revogadas.
-- **No banco, só hashes:** senhas com BCrypt; refresh tokens com SHA-256. Um vazamento do banco
-  não entrega senhas nem sessões válidas.
-- **Sem pistas para atacantes:** login inválido tem sempre a mesma mensagem e o mesmo tempo de
-  resposta, exista o e-mail ou não. Agendamento de outra pessoa responde `404`, não `403`.
-- **Negado por padrão:** toda rota exige login, exceto as públicas listadas na configuração. Regras
-  de dono (a agenda de quem, a reserva de quem) ficam nos services, com testes para cada papel.
-- **Profissionais** recebem acesso pelo administrador: `PUT /api/profissionais/{id}/acesso`.
-
-## API
-
-| Recurso | Endpoints |
-| --- | --- |
-| Serviços | `POST /api/servicos` · `GET /api/servicos` · `GET/PUT /api/servicos/{id}` · `PATCH /api/servicos/{id}/ativar` e `/inativar` |
-| Profissionais | `POST /api/profissionais` · `GET /api/profissionais` · `GET/PUT /api/profissionais/{id}` · `PUT /api/profissionais/{id}/servicos` · `PATCH .../ativar` e `/inativar` |
-| Clientes | `POST /api/clientes` · `GET /api/clientes` · `GET/PUT /api/clientes/{id}` |
-| Disponibilidade | `GET/PUT /api/profissionais/{id}/jornada` · `POST/GET /api/profissionais/{id}/bloqueios` · `DELETE .../bloqueios/{bloqueioId}` · `GET /api/profissionais/{id}/horarios-livres?servicoId=&data=` · `GET .../horarios-livres/encaixe` |
-| Autenticação | `POST /api/auth/cadastro` · `POST /api/auth/login` · `POST /api/auth/refresh` · `POST /api/auth/logout` · `GET /api/auth/eu` |
-| Notificações | `GET /api/notificacoes` (as 20 mais recentes e quantas faltam ler) · `PATCH /api/notificacoes/{id}/ler` · `PATCH /api/notificacoes/ler-todas` |
-| Agendamentos | `POST /api/agendamentos` · `POST /api/agendamentos/encaixe` · `GET /api/agendamentos` · `GET /api/agendamentos/{id}` · `PATCH .../{id}/cancelar`, `/reagendar`, `/concluir` e `/nao-compareceu` |
-
-As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
-(`page`, `size`, `sort`).
-
-### Fluxo de uma reserva
-
-1. Defina a jornada semanal do profissional (horário local, vários intervalos por dia) e, se
-   precisar, bloqueie folgas e férias.
-2. Consulte os horários livres de um dia para um serviço: o sistema desconta bloqueios, reservas
-   ativas e horários que já passaram.
-3. Reserve um desses horários (com pelo menos 1h30 de antecedência). Um segundo pedido para o
-   mesmo horário recebe `409`.
-4. Bloquear um período que já tem reservas também recebe `409`, com a lista dos agendamentos
-   afetados: o profissional cancela ou remarca antes, e nenhum cliente perde o horário sem aviso.
-5. Inativar um profissional ou serviço impede novas reservas, mas mantém as que já existem.
-6. Quem chega sem reserva é encaixado pelo barbeiro só com o nome (e, se quiser, o telefone): sem
-   antecedência mínima, mas com as mesmas regras de jornada, bloqueio e conflito.
-
-### Configuração
-
-| Propriedade | Padrão | Para que serve |
-| --- | --- | --- |
-| `agendamento.fuso-horario` | `America/Sao_Paulo` | Fuso da jornada e das datas pedidas na API |
-| `agendamento.intervalo-entre-horarios` | `PT15M` | Os horários oferecidos começam em múltiplos deste intervalo |
-| `agendamento.janela-de-reserva` | `P90D` | Até quanto tempo à frente é possível reservar |
-| `agendamento.antecedencia-minima-reserva` | `PT1H30M` | Prazo mínimo entre a reserva e o início do horário |
-| `agendamento.antecedencia-minima-cancelamento` | `PT2H` | Prazo mínimo para o cliente cancelar ou reagendar |
-| `agendamento.dados-de-exemplo` | `false` (`true` no perfil `local`) | Cadastra os [dados de exemplo](#dados-de-exemplo) num banco sem serviços |
-| `agendamento.notificacoes.remetente` | `Barbearia Tonelli <nao-responder@localhost>` | Remetente dos e-mails (`MAIL_REMETENTE`) |
-
-Todas podem vir de variáveis de ambiente (ex.: `AGENDAMENTO_FUSO_HORARIO`).
-
-E-mail e RabbitMQ (no perfil `local` já apontam para o Compose):
-
-| Variável | Padrão | Para que serve |
-| --- | --- | --- |
-| `MAIL_HOST` | vazio | Servidor SMTP. Vazio: a API sobe e só registra no log quem receberia cada e-mail |
-| `MAIL_PORT` | `587` | Porta do SMTP. Em produção a conexão exige STARTTLS |
-| `MAIL_USUARIO` e `MAIL_SENHA` | vazios | Credenciais do SMTP |
-| `MAIL_REMETENTE` | `Barbearia Tonelli <nao-responder@localhost>` | Remetente dos e-mails |
-| `SPRING_RABBITMQ_HOST` | `localhost` | Endereço do RabbitMQ (porta, usuário e senha: `SPRING_RABBITMQ_PORT`, `_USERNAME` e `_PASSWORD`; padrão `5672`, `guest`, `guest`) |
-
-Os erros seguem o padrão Problem Details (RFC 9457):
-
-```json
-{
-  "status": 400,
-  "title": "Dados inválidos",
-  "detail": "Um ou mais campos estão inválidos.",
-  "erros": [{ "campo": "email", "mensagem": "deve ser um endereço de e-mail bem formado" }]
-}
-```
+- Login com token de acesso JWT de 15 min, guardado só em memória no front, e refresh token num cookie `HttpOnly` com `SameSite=Strict`.
+- Cada renovação troca o refresh token. Se um token já trocado aparecer de novo, todas as sessões daquela família são revogadas.
+- No banco ficam só hashes: BCrypt nas senhas e SHA-256 nos refresh tokens.
+- Login inválido tem sempre a mesma mensagem e o mesmo tempo de resposta. Agendamento de outra pessoa responde `404`.
+- Toda rota exige login, exceto as públicas. As regras de dono ficam nos services, com testes para cada papel.
 
 ## Decisões técnicas
 
-- **Schema versionado com Flyway.** O Hibernate só valida (`ddl-auto: validate`); quem cria e
-  altera tabelas são as migrações em `db/migration`.
-- **Datas em UTC.** O banco e a aplicação trabalham em UTC, e a hora atual vem de um `Clock`
-  injetado, o que permite testar regras de horário com datas fixas.
-- **Conflito de horários garantido pelo banco.** Constraints de exclusão com `btree_gist` impedem
-  que o profissional ou o cliente tenham duas reservas ativas sobrepostas, mesmo sob concorrência
-  (há teste com requisições simultâneas). A aplicação valida antes só para dar uma mensagem clara.
-- **Uma trava por agenda.** Reservas, bloqueios e mudanças de jornada do mesmo profissional travam
-  a linha dele (`SELECT ... FOR UPDATE`) antes de conferir a agenda. Sem isso, uma reserva e um
-  bloqueio simultâneos poderiam passar cada um pela sua checagem (*write skew*); há teste para isso.
-- **Uma regra só para horários livres e reservas.** Um horário é reservável se e somente se aparece
-  na lista de livres; o cálculo é uma classe pura, coberta por testes unitários.
-- **Preço congelado na reserva.** O agendamento guarda o preço do momento; reajustes do serviço
-  não mudam o que já foi combinado.
-- **Erros padronizados.** Toda falha sai em Problem Details, com o status certo para cada caso:
-  404 (não encontrado), 409 (duplicado ou edição concorrente), 422 (regra de negócio).
-- **Concorrência otimista.** Cada registro tem uma versão; se duas pessoas editam ao mesmo tempo,
-  a segunda recebe 409 em vez de apagar a alteração da primeira.
-- **Inativar em vez de apagar.** Serviços e profissionais não são excluídos, para não quebrar o
-  histórico de agendamentos.
-- **Listagens sem N+1.** A lista de profissionais não carrega os serviços; o detalhe carrega tudo
-  numa consulta só.
-- **Testes com banco real.** Testcontainers sobe o mesmo PostgreSQL de produção, em vez de H2.
-- **Configuração por ambiente.** O perfil `local` traz os valores de desenvolvimento; em
-  produção, tudo vem de variáveis de ambiente (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`) e os logs
-  saem em JSON.
-- **Eventos publicados depois do commit.** A reserva grava e só então o evento vai para o RabbitMQ
-  (`@TransactionalEventListener(AFTER_COMMIT)`), então nenhum e-mail sai para uma reserva desfeita.
-  Se o broker estiver fora nesse instante, a reserva continua valendo e o aviso daquela vez se perde
-  (o erro fica no log). Cada etapa da conversa com o broker (conexão, handshake, canal e
-  confirmação) espera no máximo 2 s, então a requisição nunca fica presa. Se algum aviso passar a
-  ser crítico, o caminho é um *outbox* transacional: gravar o evento na mesma transação da reserva
-  e publicá-lo depois.
-- **Duas filas, uma por consumidor.** `email.cliente` e `notificacao.profissional` recebem os mesmos
-  eventos; a falha do SMTP não repete nem atrasa o sino, e vice-versa.
-- **Tentativas e fila de erros.** Cada consumidor tenta a mensagem 4 vezes, esperando 2 s, 6 s e 18 s;
-  depois ela vai para a `.dlq` da própria fila e fica lá para análise (reprocessar é manual, pelo
-  painel do RabbitMQ do Compose de desenvolvimento). Mensagem ilegível, ou com tipo fora do pacote dos eventos, vai direto para a
-  `.dlq`, sem tentativas.
-- **Entrega "pelo menos uma vez".** Se a aplicação cair depois de enviar o e-mail e antes de confirmar
-  a mensagem, o e-mail pode se repetir. Não há deduplicação.
-- **Sino por consulta.** O front pergunta pelas notificações a cada 30 s e ao voltar para a aba;
-  não há conexão aberta em tempo real.
-- **Imagem Docker enxuta.** Build em duas etapas, JAR extraído em camadas e execução sem usuário
-  root.
+- Schema versionado com Flyway. O Hibernate só valida (`ddl-auto: validate`).
+- Conflito de horários garantido pelo banco: constraints de exclusão com `btree_gist`, testadas com requisições simultâneas.
+- Uma trava por agenda (`SELECT ... FOR UPDATE`) impede que uma reserva e um bloqueio simultâneos passem cada um pela sua checagem (*write skew*).
+- Concorrência otimista: cada registro tem versão, e quem edita depois recebe `409`.
+- Datas em UTC e hora vinda de um `Clock` injetado, para testar regras de horário com datas fixas.
+- O preço fica congelado na reserva. Serviços e profissionais são inativados, não apagados.
+- Erros no padrão Problem Details (RFC 9457), com `404`, `409` e `422`.
+- Quartz no PostgreSQL, em cluster: com duas instâncias da API, só uma varre por vez.
+- Testes com PostgreSQL, RabbitMQ e Mailpit reais (Testcontainers), sem H2.
+
+Endpoints, regras de reserva, avisos, configuração e deploy: [`docs/referencia.md`](docs/referencia.md).
 
 ## Roadmap
 
@@ -286,11 +137,11 @@ Os erros seguem o padrão Problem Details (RFC 9457):
 - [x] **5. Angular:** base, login e rotas protegidas
 - [x] **6. Telas do front-end:** serviços, minhas reservas e agenda do barbeiro com encaixe e bloqueio
 - [x] **7. RabbitMQ:** eventos de agendamento, e-mails ao cliente e sino de notificações do barbeiro
-- [ ] **8. Quartz:** lembretes 24h antes
+- [x] **8. Quartz:** lembretes por e-mail 24h antes do horário (1h antes para quem reserva em cima da hora)
 - [ ] **9. Redis:** cache de horários e limite de tentativas de login
 - [ ] **10. Painel do administrador:** visão da semana com FullCalendar e histórico com Hibernate Envers
 - [ ] **11. Deploy** com link público
 
 ## Autor
 
-Guilherme Tonelli · [GitHub](https://github.com/Guilherme-Tonellidev)
+Guilherme Tonelli · [LinkedIn](https://www.linkedin.com/in/guilherme-tonellidev) · [GitHub](https://github.com/Guilherme-Tonellidev)
