@@ -204,6 +204,22 @@ class AutenticacaoApiTest extends IntegracaoTest {
         assertThat(entrar("ana@barbearia.com", "senha-inicial-123").getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
+    @Test
+    void trocarASenhaDoProfissionalEncerraAsSessoesAbertas() {
+        UUID ana = cadastrarProfissionalComAcesso("ana@barbearia.com", "senha-inicial-123");
+        String refresh = cookie(entrar("ana@barbearia.com", "senha-inicial-123"));
+
+        var troca = api.put().uri("/api/profissionais/{id}/acesso", ana)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new AcessoRequest("senha-nova-456"))
+                .retrieve().toBodilessEntity();
+
+        assertThat(troca.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(renovar(refresh).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(entrarCru("ana@barbearia.com", "senha-inicial-123").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(entrar("ana@barbearia.com", "senha-nova-456").getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
     private UUID cadastrarProfissionalComAcesso(String email, String senha) {
         UUID id = api.post().uri("/api/profissionais")
                 .contentType(MediaType.APPLICATION_JSON)

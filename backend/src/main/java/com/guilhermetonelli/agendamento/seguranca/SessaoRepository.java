@@ -20,4 +20,9 @@ interface SessaoRepository extends JpaRepository<Sessao, UUID> {
     @Modifying
     @Query("UPDATE Sessao s SET s.revogadaEm = :agora WHERE s.familia = :familia AND s.revogadaEm IS NULL")
     void revogarFamilia(UUID familia, Instant agora);
+
+    /** Encerra todas as sessões abertas do usuário, em qualquer dispositivo. */
+    @Modifying
+    @Query("UPDATE Sessao s SET s.revogadaEm = :agora WHERE s.usuario.id = :usuarioId AND s.revogadaEm IS NULL")
+    void revogarDoUsuario(UUID usuarioId, Instant agora);
 }

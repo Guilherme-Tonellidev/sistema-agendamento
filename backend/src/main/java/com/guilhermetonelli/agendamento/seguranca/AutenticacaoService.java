@@ -129,7 +129,11 @@ public class AutenticacaoService {
     public void definirAcessoDeProfissional(UUID profissionalId, String senha) {
         String senhaHash = senhas.hash(senha);
         usuarios.findByProfissionalId(profissionalId).ifPresentOrElse(
-                usuario -> usuario.definirSenha(senhaHash),
+                usuario -> {
+                    usuario.definirSenha(senhaHash);
+                    // Quem tinha a senha antiga, ou um refresh token copiado, não segue com a sessão aberta.
+                    sessoes.revogarDoUsuario(usuario.getId(), Instant.now(clock));
+                },
                 () -> {
                     String email = profissionalService.obterComServicos(profissionalId).getEmail();
                     garantirEmailLivre(email);
