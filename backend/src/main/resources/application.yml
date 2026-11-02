@@ -1,10 +1,9 @@
+# Sem perfil ativo, a aplicação não traz valor nenhum de desenvolvimento: banco, JWT_SEGREDO e o resto vêm do ambiente,
+# e ela não sobe se faltar algum. Em produção, o Dockerfile define SPRING_PROFILES_ACTIVE=prod. Para desenvolver, ative
+# o perfil local (spring-boot:run e spring-boot:test-run já fazem isso, ver pom.xml).
 spring:
   application:
     name: agendamento-api
-  profiles:
-    # Sem perfil informado, a aplicação sobe com as configurações de desenvolvimento.
-    # Em produção, o Dockerfile define SPRING_PROFILES_ACTIVE=prod.
-    default: local
   threads:
     virtual:
       enabled: true

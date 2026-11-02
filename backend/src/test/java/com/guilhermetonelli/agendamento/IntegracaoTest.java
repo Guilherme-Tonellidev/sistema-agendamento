@@ -11,10 +11,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestClient;
 
 import com.guilhermetonelli.agendamento.seguranca.EmissorDeTokens;
+import com.guilhermetonelli.agendamento.seguranca.LimiteDeTentativas;
 import com.guilhermetonelli.agendamento.seguranca.Papel;
 import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
 
@@ -28,6 +30,8 @@ import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
  * container, então PostgreSQL, RabbitMQ e Mailpit sobem uma vez só por execução.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// A aplicação não tem mais perfil padrão: o local dá a chave JWT e os dados de exemplo que estes testes usam.
+@ActiveProfiles("local")
 @TestPropertySource(properties = {
     "spring.rabbitmq.listener.simple.retry.initial-interval=50ms",
     "spring.rabbitmq.listener.simple.retry.multiplier=1",
@@ -62,6 +66,9 @@ public abstract class IntegracaoTest {
     @Autowired
     private EmissorDeTokens emissor;
 
+    @Autowired
+    private LimiteDeTentativas limiteDeLogin;
+
     /** Cliente HTTP da API como administrador. Respostas de erro não lançam exceção, para o teste conferir o status. */
     protected RestClient api;
 
@@ -74,6 +81,8 @@ public abstract class IntegracaoTest {
         filas.religarConsumidores();
         mailpit.limpar();
         relogio.reiniciar();
+        // O contexto é compartilhado: sem isso, as tentativas de login de um teste bloqueariam o seguinte.
+        limiteDeLogin.reiniciar();
         eventos.limpar();
         api = apiComo(new UsuarioLogado(UUID.randomUUID(), Papel.ADMIN, null, null));
     }

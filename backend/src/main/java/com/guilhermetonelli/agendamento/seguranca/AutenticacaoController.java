@@ -3,6 +3,7 @@ package com.guilhermetonelli.agendamento.seguranca;
 import java.time.Duration;
 import java.util.UUID;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpHeaders;
@@ -27,6 +28,7 @@ import com.guilhermetonelli.agendamento.seguranca.dto.UsuarioResponse;
 import com.guilhermetonelli.agendamento.shared.exception.NaoAutenticadoException;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
@@ -57,8 +59,9 @@ class AutenticacaoController {
 
     @PostMapping("/api/auth/login")
     @Operation(summary = "Entra com e-mail e senha")
-    ResponseEntity<TokenResponse> entrar(@Valid @RequestBody LoginRequest request) {
-        return comCookie(HttpStatus.OK, service.entrar(request));
+    @ApiResponse(responseCode = "429", description = "Tentativas demais para este e-mail e origem; veja o cabeçalho Retry-After")
+    ResponseEntity<TokenResponse> entrar(@Valid @RequestBody LoginRequest request, HttpServletRequest requisicao) {
+        return comCookie(HttpStatus.OK, service.entrar(request, requisicao.getRemoteAddr()));
     }
 
     @PostMapping("/api/auth/refresh")

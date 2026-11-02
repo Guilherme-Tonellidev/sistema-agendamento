@@ -10,3 +10,11 @@ spring:
     properties:
       # Em produção as credenciais do e-mail nunca trafegam sem TLS.
       mail.smtp.starttls.required: true
+
+# A documentação interativa existe só em desenvolvimento: em produção, /v3/api-docs e /swagger-ui entregariam o mapa
+# completo da API (rotas, campos e regras de validação) a qualquer pessoa sem login.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

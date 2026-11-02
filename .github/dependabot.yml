@@ -1,0 +1,8 @@
+# As ações dos workflows estão fixadas por commit (um tag pode ser movido para outro código).
+# O Dependabot abre um PR quando sai versão nova, com o SHA e o comentário de versão atualizados.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

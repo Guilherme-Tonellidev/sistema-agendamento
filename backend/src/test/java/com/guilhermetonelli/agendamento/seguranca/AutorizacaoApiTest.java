@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -77,6 +78,33 @@ class AutorizacaoApiTest extends IntegracaoTest {
                 .matches(MediaType.APPLICATION_PROBLEM_JSON::isCompatibleWith, "application/problem+json");
         assertThat(status(anonima.get().uri("/api/agendamentos"))).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(status(anonima.get().uri("/api/profissionais/{id}/bloqueios", ana))).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void vitrineNaoMostraInativosNemDeixaOrdenarPorContato() {
+        api.patch().uri("/api/profissionais/{id}/inativar", bruno).retrieve().toBodilessEntity();
+        UUID barba = api.post().uri("/api/servicos").contentType(MediaType.APPLICATION_JSON)
+                .body(new ServicoRequest("Barba", null, 30, BigDecimal.TEN)).retrieve().body(ServicoResponse.class).id();
+        api.patch().uri("/api/servicos/{id}/inativar", barba).retrieve().toBodilessEntity();
+
+        for (RestClient visitante : List.of(apiAnonima(), apiComo(comoCliente(carlos)))) {
+            assertThat(nomes(visitante, "/api/profissionais?ativo=false")).containsExactly("Ana Souza");
+            assertThat(nomes(visitante, "/api/profissionais")).containsExactly("Ana Souza");
+            assertThat(nomes(visitante, "/api/servicos?ativo=false")).containsExactly("Corte");
+            assertThat(status(visitante.get().uri("/api/profissionais?sort=email"))).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(status(visitante.get().uri("/api/profissionais?sort=telefone,desc"))).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(status(visitante.get().uri("/api/servicos?sort=ativo"))).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(status(visitante.get().uri("/api/profissionais?sort=nome,desc"))).isEqualTo(HttpStatus.OK);
+            assertThat(status(visitante.get().uri("/api/servicos?sort=preco"))).isEqualTo(HttpStatus.OK);
+        }
+    }
+
+    @Test
+    void administradorContinuaVendoInativosEOrdenandoPorQualquerCampo() {
+        api.patch().uri("/api/profissionais/{id}/inativar", bruno).retrieve().toBodilessEntity();
+
+        assertThat(nomes(api, "/api/profissionais?ativo=false")).containsExactly("Bruno Dias");
+        assertThat(nomes(api, "/api/profissionais?sort=email,desc")).containsExactly("Bruno Dias", "Ana Souza");
     }
 
     @Test
@@ -169,6 +197,12 @@ class AutorizacaoApiTest extends IntegracaoTest {
                 .retrieve().toEntity(AgendamentoResponse.class);
         assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         return resposta.getBody().id();
+    }
+
+    /** Nomes dos itens de uma listagem de profissionais ou serviços, na ordem devolvida. */
+    private static List<String> nomes(RestClient cliente, String uri) {
+        Pagina<Map<String, Object>> pagina = cliente.get().uri(uri).retrieve().body(new ParameterizedTypeReference<>() {});
+        return pagina.content().stream().map(item -> (String) item.get("nome")).toList();
     }
 
     private static List<UUID> listar(RestClient cliente, String filtro) {

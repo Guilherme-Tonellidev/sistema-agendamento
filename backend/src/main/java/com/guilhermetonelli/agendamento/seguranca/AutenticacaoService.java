@@ -28,6 +28,7 @@ import com.guilhermetonelli.agendamento.shared.exception.RecursoNaoEncontradoExc
 public class AutenticacaoService {
 
     private static final String CREDENCIAIS_INVALIDAS = "E-mail ou senha inválidos.";
+    private static final String EMAIL_EM_USO = "Já existe uma conta com este e-mail.";
     private static final String SESSAO_INVALIDA = "Sessão expirada ou inválida. Faça login novamente.";
 
     private final SecureRandom aleatorio = new SecureRandom();
@@ -39,6 +40,7 @@ public class AutenticacaoService {
     private final ClienteService clienteService;
     private final ProfissionalService profissionalService;
     private final SegurancaProperties properties;
+    private final LimiteDeTentativas limite;
     private final Clock clock;
 
     AutenticacaoService(
@@ -49,6 +51,7 @@ public class AutenticacaoService {
             ClienteService clienteService,
             ProfissionalService profissionalService,
             SegurancaProperties properties,
+            LimiteDeTentativas limite,
             Clock clock) {
         this.usuarios = usuarios;
         this.sessoes = sessoes;
@@ -57,6 +60,7 @@ public class AutenticacaoService {
         this.clienteService = clienteService;
         this.profissionalService = profissionalService;
         this.properties = properties;
+        this.limite = limite;
         this.clock = clock;
     }
 
@@ -72,17 +76,31 @@ public class AutenticacaoService {
         String email = Textos.normalizarEmail(request.email());
         garantirEmailLivre(email);
         String senhaHash = senhas.hash(request.senha());
-        UUID clienteId = clienteService.cadastrar(new ClienteRequest(request.nome(), email, request.telefone())).id();
+        UUID clienteId;
+        try {
+            clienteId = clienteService.cadastrar(new ClienteRequest(request.nome(), email, request.telefone())).id();
+        } catch (ConflitoException e) {
+            // Mesma resposta de "já existe uma conta": quem se cadastra não descobre se o e-mail é de um cliente da casa.
+            throw new ConflitoException(EMAIL_EM_USO);
+        }
         return usuarios.save(Usuario.cliente(email, senhaHash, clienteId));
     }
 
+    /**
+     * {@code origem} é o endereço de quem fez a requisição. A tentativa é contada antes de conferir a senha, tanto
+     * para e-mail existente quanto inexistente, e só um login bem-sucedido zera a contagem.
+     */
     @Transactional
-    SessaoAberta entrar(LoginRequest request) {
+    SessaoAberta entrar(LoginRequest request, String origem) {
+        String chave = LimiteDeTentativas.chave(request.email(), origem);
+        limite.registrarTentativa(chave);
+
         Usuario usuario = usuarios.findByEmail(Textos.normalizarEmail(request.email())).orElse(null);
         String hash = usuario == null ? null : usuario.getSenhaHash();
-        if (!senhas.confere(request.senha(), hash) || !usuario.isAtivo()) {
+        if (!senhas.confere(request.senha(), hash) || !podeEntrar(usuario)) {
             throw new NaoAutenticadoException(CREDENCIAIS_INVALIDAS);
         }
+        limite.limpar(chave);
         if (senhas.precisaAtualizar(hash)) {
             usuario.definirSenha(senhas.hash(request.senha()));
         }
@@ -103,7 +121,7 @@ public class AutenticacaoService {
             sessoes.revogarFamilia(sessao.getFamilia(), agora);
             throw new NaoAutenticadoException(SESSAO_INVALIDA);
         }
-        if (!sessao.valida(agora) || !sessao.getUsuario().isAtivo()) {
+        if (!sessao.valida(agora) || !podeEntrar(sessao.getUsuario())) {
             throw new NaoAutenticadoException(SESSAO_INVALIDA);
         }
         sessao.marcarUsada(agora);
@@ -129,7 +147,11 @@ public class AutenticacaoService {
     public void definirAcessoDeProfissional(UUID profissionalId, String senha) {
         String senhaHash = senhas.hash(senha);
         usuarios.findByProfissionalId(profissionalId).ifPresentOrElse(
-                usuario -> usuario.definirSenha(senhaHash),
+                usuario -> {
+                    usuario.definirSenha(senhaHash);
+                    // Quem tinha a senha antiga, ou um refresh token copiado, não segue com a sessão aberta.
+                    sessoes.revogarDoUsuario(usuario.getId(), Instant.now(clock));
+                },
                 () -> {
                     String email = profissionalService.obterComServicos(profissionalId).getEmail();
                     garantirEmailLivre(email);
@@ -145,9 +167,18 @@ public class AutenticacaoService {
         }
     }
 
+    /**
+     * Conta ativa e, no caso de profissional, cadastro ativo: inativar o profissional também tira o acesso dele,
+     * tanto no login quanto na renovação da sessão. O token de acesso já emitido vale até vencer (15 minutos).
+     */
+    private boolean podeEntrar(Usuario usuario) {
+        UUID profissionalId = usuario.getProfissionalId();
+        return usuario.isAtivo() && (profissionalId == null || profissionalService.estaAtivo(profissionalId));
+    }
+
     private void garantirEmailLivre(String email) {
         if (usuarios.existsByEmail(email)) {
-            throw new ConflitoException("Já existe uma conta com este e-mail.");
+            throw new ConflitoException(EMAIL_EM_USO);
         }
     }
 

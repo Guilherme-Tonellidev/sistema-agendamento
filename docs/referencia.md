@@ -4,7 +4,8 @@ Detalhes que não cabem no [README](../README.md): API, regras de reserva, aviso
 
 ## API
 
-A documentação interativa (Swagger UI) fica em <http://localhost:8080/swagger-ui.html> com a API no ar.
+A documentação interativa (Swagger UI) fica em <http://localhost:8080/swagger-ui.html> com a API no ar. Ela só existe em
+desenvolvimento: o perfil `prod` desliga o Swagger UI e o `/v3/api-docs`.
 
 | Recurso | Endpoints |
 | --- | --- |
@@ -16,8 +17,15 @@ A documentação interativa (Swagger UI) fica em <http://localhost:8080/swagger-
 | Notificações | `GET /api/notificacoes` (as 20 mais recentes e quantas faltam ler) · `PATCH /api/notificacoes/{id}/ler` · `PATCH /api/notificacoes/ler-todas` |
 | Agendamentos | `POST /api/agendamentos` · `POST /api/agendamentos/encaixe` · `GET /api/agendamentos` · `GET /api/agendamentos/{id}` · `PATCH .../{id}/cancelar`, `/reagendar`, `/concluir` e `/nao-compareceu` |
 
+`POST /api/auth/login` responde `429` (com `Retry-After`, em segundos) depois de 5 tentativas em 15 minutos para o mesmo
+e-mail e a mesma origem; um login correto zera a contagem. A origem é o endereço da conexão: atrás de um proxy reverso
+ela é a do proxy, então configure o servidor para confiar no `X-Forwarded-For` dele (e só nele) ou o limite passa a valer
+por e-mail para todos.
+
 As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
-(`page`, `size`, `sort`).
+(`page`, `size`, `sort`). Nas listagens públicas de serviços e profissionais, quem não é administrador só vê itens
+ativos (o filtro `ativo=false` é ignorado) e só pode ordenar por `nome` (e, nos serviços, `duracaoMinutos` e `preco`);
+qualquer outro campo recebe `400`.
 
 ## Fluxo de uma reserva
 
@@ -122,7 +130,9 @@ Use `docker compose -f docker-compose.prod.yml pull` para atualizar para a image
 **Em uma plataforma gerenciada** (Render, Railway, Fly.io...): rode a imagem acima (ou o
 `backend/Dockerfile`) com `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` apontando para um PostgreSQL 18,
 mais `JWT_SEGREDO` (obrigatório), `ADMIN_EMAIL`, `ADMIN_SENHA` e `CORS_ORIGENS`. O health check fica em
-`/actuator/health/readiness`. Sem `JWT_SEGREDO` a aplicação nem sobe, de propósito. Os avisos
+`/actuator/health/readiness`. Sem `JWT_SEGREDO` a aplicação nem sobe, de propósito. Ela também não tem perfil padrão: a imagem define
+`SPRING_PROFILES_ACTIVE=prod`, e o perfil `local` nunca deve ser ativado em produção, porque cadastra contas com senhas
+conhecidas. Os avisos
 precisam também de um RabbitMQ (`SPRING_RABBITMQ_HOST`, `SPRING_RABBITMQ_USERNAME` e
 `SPRING_RABBITMQ_PASSWORD`) e de um servidor SMTP (`MAIL_*`, abaixo).
 
