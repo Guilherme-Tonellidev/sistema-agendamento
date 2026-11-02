@@ -122,7 +122,9 @@ Use `docker compose -f docker-compose.prod.yml pull` para atualizar para a image
 **Em uma plataforma gerenciada** (Render, Railway, Fly.io...): rode a imagem acima (ou o
 `backend/Dockerfile`) com `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` apontando para um PostgreSQL 18,
 mais `JWT_SEGREDO` (obrigatório), `ADMIN_EMAIL`, `ADMIN_SENHA` e `CORS_ORIGENS`. O health check fica em
-`/actuator/health/readiness`. Sem `JWT_SEGREDO` a aplicação nem sobe, de propósito. Os avisos
+`/actuator/health/readiness`. Sem `JWT_SEGREDO` a aplicação nem sobe, de propósito. Ela também não tem perfil padrão: a imagem define
+`SPRING_PROFILES_ACTIVE=prod`, e o perfil `local` nunca deve ser ativado em produção, porque cadastra contas com senhas
+conhecidas. Os avisos
 precisam também de um RabbitMQ (`SPRING_RABBITMQ_HOST`, `SPRING_RABBITMQ_USERNAME` e
 `SPRING_RABBITMQ_PASSWORD`) e de um servidor SMTP (`MAIL_*`, abaixo).
 

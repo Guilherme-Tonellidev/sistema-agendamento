@@ -9,6 +9,10 @@ import org.springframework.boot.SpringApplication;
 public class TestAgendamentoApplication {
 
     public static void main(String[] args) {
+        // Sem perfil, a aplicação não traz valores de desenvolvimento (chave JWT, e-mail): aqui o padrão é o local.
+        if (System.getProperty("spring.profiles.active") == null && System.getenv("SPRING_PROFILES_ACTIVE") == null) {
+            System.setProperty("spring.profiles.active", "local");
+        }
         SpringApplication.from(AgendamentoApplication::main)
                 .with(TestcontainersConfiguration.class)
                 .run(args);

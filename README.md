@@ -49,6 +49,10 @@ cd backend
 ./mvnw spring-boot:run
 ```
 
+Os dois comandos ativam o perfil `local`: chave JWT sorteada a cada subida, conta de administrador e dados de exemplo.
+Sem perfil ativo a aplicação não usa nenhum valor de desenvolvimento e exige as variáveis de ambiente da seção de deploy
+em [`docs/referencia.md`](docs/referencia.md). Para rodar o jar direto, use `--spring.profiles.active=local`.
+
 Front-end, com a API no ar:
 
 ```bash

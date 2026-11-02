@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestClient;
 
@@ -28,6 +29,8 @@ import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
  * container, então PostgreSQL, RabbitMQ e Mailpit sobem uma vez só por execução.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// A aplicação não tem mais perfil padrão: o local dá a chave JWT e os dados de exemplo que estes testes usam.
+@ActiveProfiles("local")
 @TestPropertySource(properties = {
     "spring.rabbitmq.listener.simple.retry.initial-interval=50ms",
     "spring.rabbitmq.listener.simple.retry.multiplier=1",
