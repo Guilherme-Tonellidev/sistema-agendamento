@@ -80,7 +80,7 @@ public class AutenticacaoService {
     SessaoAberta entrar(LoginRequest request) {
         Usuario usuario = usuarios.findByEmail(Textos.normalizarEmail(request.email())).orElse(null);
         String hash = usuario == null ? null : usuario.getSenhaHash();
-        if (!senhas.confere(request.senha(), hash) || !usuario.isAtivo()) {
+        if (!senhas.confere(request.senha(), hash) || !podeEntrar(usuario)) {
             throw new NaoAutenticadoException(CREDENCIAIS_INVALIDAS);
         }
         if (senhas.precisaAtualizar(hash)) {
@@ -103,7 +103,7 @@ public class AutenticacaoService {
             sessoes.revogarFamilia(sessao.getFamilia(), agora);
             throw new NaoAutenticadoException(SESSAO_INVALIDA);
         }
-        if (!sessao.valida(agora) || !sessao.getUsuario().isAtivo()) {
+        if (!sessao.valida(agora) || !podeEntrar(sessao.getUsuario())) {
             throw new NaoAutenticadoException(SESSAO_INVALIDA);
         }
         sessao.marcarUsada(agora);
@@ -143,6 +143,15 @@ public class AutenticacaoService {
         if (!usuarios.existsByEmail(normalizado)) {
             usuarios.save(Usuario.admin(normalizado, senhas.hash(senha)));
         }
+    }
+
+    /**
+     * Conta ativa e, no caso de profissional, cadastro ativo: inativar o profissional também tira o acesso dele,
+     * tanto no login quanto na renovação da sessão. O token de acesso já emitido vale até vencer (15 minutos).
+     */
+    private boolean podeEntrar(Usuario usuario) {
+        UUID profissionalId = usuario.getProfissionalId();
+        return usuario.isAtivo() && (profissionalId == null || profissionalService.estaAtivo(profissionalId));
     }
 
     private void garantirEmailLivre(String email) {

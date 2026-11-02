@@ -182,6 +182,40 @@ class AutenticacaoApiTest extends IntegracaoTest {
         });
     }
 
+    @Test
+    void profissionalInativadoNaoEntraNemRenovaASessao() {
+        UUID ana = cadastrarProfissionalComAcesso("ana@barbearia.com", "senha-inicial-123");
+        String refresh = cookie(entrar("ana@barbearia.com", "senha-inicial-123"));
+
+        api.patch().uri("/api/profissionais/{id}/inativar", ana).retrieve().toBodilessEntity();
+
+        var login = entrarCru("ana@barbearia.com", "senha-inicial-123");
+        assertThat(login.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(detalhe(login)).isEqualTo("E-mail ou senha inválidos.");
+        assertThat(renovar(refresh).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void profissionalReativadoVoltaAEntrar() {
+        UUID ana = cadastrarProfissionalComAcesso("ana@barbearia.com", "senha-inicial-123");
+        api.patch().uri("/api/profissionais/{id}/inativar", ana).retrieve().toBodilessEntity();
+        api.patch().uri("/api/profissionais/{id}/ativar", ana).retrieve().toBodilessEntity();
+
+        assertThat(entrar("ana@barbearia.com", "senha-inicial-123").getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    private UUID cadastrarProfissionalComAcesso(String email, String senha) {
+        UUID id = api.post().uri("/api/profissionais")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new ProfissionalRequest("Ana Souza", email, null))
+                .retrieve().body(ProfissionalResponse.class).id();
+        api.put().uri("/api/profissionais/{id}/acesso", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new AcessoRequest(senha))
+                .retrieve().toBodilessEntity();
+        return id;
+    }
+
     private ResponseEntity<TokenResponse> cadastrar(String email) {
         return anonima.post().uri("/api/auth/cadastro")
                 .contentType(MediaType.APPLICATION_JSON)

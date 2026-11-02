@@ -16,6 +16,8 @@ interface ProfissionalRepository extends JpaRepository<Profissional, UUID>, JpaS
 
     boolean existsByEmailAndIdNot(String email, UUID id);
 
+    boolean existsByIdAndAtivoTrue(UUID id);
+
     /** Busca o profissional já com os serviços, numa consulta só (evita o problema N+1). */
     @EntityGraph(attributePaths = "servicos")
     Optional<Profissional> findComServicosById(UUID id);

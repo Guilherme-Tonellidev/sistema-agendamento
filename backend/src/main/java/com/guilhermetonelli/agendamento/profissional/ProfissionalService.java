@@ -92,6 +92,11 @@ public class ProfissionalService {
         return repository.existsById(id);
     }
 
+    /** Cadastro existente e ativo. O login do profissional depende disso: quem foi inativado perde o acesso. */
+    public boolean estaAtivo(UUID id) {
+        return repository.existsByIdAndAtivoTrue(id);
+    }
+
     public void garantirQueExiste(UUID id) {
         if (!repository.existsById(id)) {
             throw naoEncontrado(id);
