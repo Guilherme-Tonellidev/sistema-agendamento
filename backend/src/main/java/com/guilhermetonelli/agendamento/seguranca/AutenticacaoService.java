@@ -28,6 +28,7 @@ import com.guilhermetonelli.agendamento.shared.exception.RecursoNaoEncontradoExc
 public class AutenticacaoService {
 
     private static final String CREDENCIAIS_INVALIDAS = "E-mail ou senha inválidos.";
+    private static final String EMAIL_EM_USO = "Já existe uma conta com este e-mail.";
     private static final String SESSAO_INVALIDA = "Sessão expirada ou inválida. Faça login novamente.";
 
     private final SecureRandom aleatorio = new SecureRandom();
@@ -75,7 +76,13 @@ public class AutenticacaoService {
         String email = Textos.normalizarEmail(request.email());
         garantirEmailLivre(email);
         String senhaHash = senhas.hash(request.senha());
-        UUID clienteId = clienteService.cadastrar(new ClienteRequest(request.nome(), email, request.telefone())).id();
+        UUID clienteId;
+        try {
+            clienteId = clienteService.cadastrar(new ClienteRequest(request.nome(), email, request.telefone())).id();
+        } catch (ConflitoException e) {
+            // Mesma resposta de "já existe uma conta": quem se cadastra não descobre se o e-mail é de um cliente da casa.
+            throw new ConflitoException(EMAIL_EM_USO);
+        }
         return usuarios.save(Usuario.cliente(email, senhaHash, clienteId));
     }
 
@@ -171,7 +178,7 @@ public class AutenticacaoService {
 
     private void garantirEmailLivre(String email) {
         if (usuarios.existsByEmail(email)) {
-            throw new ConflitoException("Já existe uma conta com este e-mail.");
+            throw new ConflitoException(EMAIL_EM_USO);
         }
     }
 

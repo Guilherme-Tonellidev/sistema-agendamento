@@ -15,6 +15,7 @@ import org.springframework.web.client.RestClient;
 
 import com.guilhermetonelli.agendamento.IntegracaoTest;
 import com.guilhermetonelli.agendamento.RelogioDeTeste;
+import com.guilhermetonelli.agendamento.cliente.dto.ClienteRequest;
 import com.guilhermetonelli.agendamento.profissional.dto.ProfissionalRequest;
 import com.guilhermetonelli.agendamento.profissional.dto.ProfissionalResponse;
 import com.guilhermetonelli.agendamento.seguranca.dto.AcessoRequest;
@@ -63,6 +64,22 @@ class AutenticacaoApiTest extends IntegracaoTest {
                 .retrieve().toEntity(String.class);
 
         assertThat(repetido.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void cadastroNaoRevelaSeOEmailJaEClienteDaCasa() {
+        cadastrar("carlos@gmail.com");
+        api.post().uri("/api/clientes")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new ClienteRequest("Bruno Lima", "bruno@gmail.com", null))
+                .retrieve().toBodilessEntity();
+
+        var comConta = cadastrarCru("carlos@gmail.com");
+        var semConta = cadastrarCru("bruno@gmail.com");
+
+        assertThat(comConta.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(semConta.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(detalhe(semConta)).isEqualTo(detalhe(comConta)).doesNotContain("bruno");
     }
 
     @Test
@@ -310,6 +327,13 @@ class AutenticacaoApiTest extends IntegracaoTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new CadastroRequest("Carlos Lima", email, null, SENHA))
                 .retrieve().toEntity(TokenResponse.class);
+    }
+
+    private ResponseEntity<String> cadastrarCru(String email) {
+        return anonima.post().uri("/api/auth/cadastro")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new CadastroRequest("Outra Pessoa", email, null, SENHA))
+                .retrieve().toEntity(String.class);
     }
 
     private ResponseEntity<TokenResponse> entrar(String email, String senha) {
