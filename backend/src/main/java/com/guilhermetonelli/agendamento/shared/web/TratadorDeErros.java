@@ -24,6 +24,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import com.guilhermetonelli.agendamento.shared.exception.ConflitoException;
 import com.guilhermetonelli.agendamento.shared.exception.NaoAutenticadoException;
+import com.guilhermetonelli.agendamento.shared.exception.ParametroInvalidoException;
 import com.guilhermetonelli.agendamento.shared.exception.RecursoNaoEncontradoException;
 import com.guilhermetonelli.agendamento.shared.exception.RegraDeNegocioException;
 import com.guilhermetonelli.agendamento.shared.exception.TentativasDemaisException;
@@ -90,6 +91,11 @@ class TratadorDeErros extends ResponseEntityExceptionHandler {
     ProblemDetail edicaoConcorrente(ObjectOptimisticLockingFailureException ex) {
         return problema(HttpStatus.CONFLICT, "Edição concorrente",
                 "O registro foi alterado por outra requisição. Recarregue os dados e tente de novo.");
+    }
+
+    @ExceptionHandler(ParametroInvalidoException.class)
+    ProblemDetail parametroInvalido(ParametroInvalidoException ex) {
+        return problema(HttpStatus.BAD_REQUEST, "Parâmetro inválido", ex.getMessage());
     }
 
     /** Ordenação por um campo que não existe, como {@code ?sort=senha}. */

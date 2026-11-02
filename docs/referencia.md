@@ -23,7 +23,9 @@ ela é a do proxy, então configure o servidor para confiar no `X-Forwarded-For`
 por e-mail para todos.
 
 As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
-(`page`, `size`, `sort`).
+(`page`, `size`, `sort`). Nas listagens públicas de serviços e profissionais, quem não é administrador só vê itens
+ativos (o filtro `ativo=false` é ignorado) e só pode ordenar por `nome` (e, nos serviços, `duracaoMinutos` e `preco`);
+qualquer outro campo recebe `400`.
 
 ## Fluxo de uma reserva
 

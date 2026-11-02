@@ -1,5 +1,6 @@
 package com.guilhermetonelli.agendamento.profissional;
 
+import java.util.Set;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
@@ -28,6 +29,7 @@ import com.guilhermetonelli.agendamento.profissional.dto.ProfissionalResponse;
 import com.guilhermetonelli.agendamento.profissional.dto.ProfissionalResumoResponse;
 import com.guilhermetonelli.agendamento.profissional.dto.ServicosDoProfissionalRequest;
 import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
+import com.guilhermetonelli.agendamento.shared.web.Ordenacao;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,6 +38,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("/api/profissionais")
 @Tag(name = "Profissionais", description = "Quem presta os serviços")
 class ProfissionalController {
+
+    /** Campos pelos quais quem não é administrador pode ordenar a listagem. */
+    private static final Set<String> CAMPOS_DA_VITRINE = Set.of("nome");
 
     private final ProfissionalService service;
 
@@ -58,8 +63,13 @@ class ProfissionalController {
             @ParameterObject ProfissionalFiltro filtro,
             @ParameterObject @PageableDefault(size = 20, sort = "nome") Pageable pageable,
             @AuthenticationPrincipal UsuarioLogado eu) {
-        var pagina = service.listar(filtro, pageable);
-        return new PagedModel<>(eu != null && eu.admin() ? pagina : pagina.map(ProfissionalResumoResponse::semContato));
+        boolean admin = eu != null && eu.admin();
+        if (!admin) {
+            // Vitrine pública: nada de ordenar por e-mail ou telefone, que a resposta esconde, nem de ver inativos.
+            Ordenacao.permitirSomente(pageable, CAMPOS_DA_VITRINE);
+        }
+        var pagina = service.listar(admin ? filtro : filtro.somenteAtivos(), pageable);
+        return new PagedModel<>(admin ? pagina : pagina.map(ProfissionalResumoResponse::semContato));
     }
 
     @GetMapping("/{id}")
