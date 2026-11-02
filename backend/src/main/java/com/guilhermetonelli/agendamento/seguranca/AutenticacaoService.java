@@ -39,6 +39,7 @@ public class AutenticacaoService {
     private final ClienteService clienteService;
     private final ProfissionalService profissionalService;
     private final SegurancaProperties properties;
+    private final LimiteDeTentativas limite;
     private final Clock clock;
 
     AutenticacaoService(
@@ -49,6 +50,7 @@ public class AutenticacaoService {
             ClienteService clienteService,
             ProfissionalService profissionalService,
             SegurancaProperties properties,
+            LimiteDeTentativas limite,
             Clock clock) {
         this.usuarios = usuarios;
         this.sessoes = sessoes;
@@ -57,6 +59,7 @@ public class AutenticacaoService {
         this.clienteService = clienteService;
         this.profissionalService = profissionalService;
         this.properties = properties;
+        this.limite = limite;
         this.clock = clock;
     }
 
@@ -76,13 +79,21 @@ public class AutenticacaoService {
         return usuarios.save(Usuario.cliente(email, senhaHash, clienteId));
     }
 
+    /**
+     * {@code origem} é o endereço de quem fez a requisição. A tentativa é contada antes de conferir a senha, tanto
+     * para e-mail existente quanto inexistente, e só um login bem-sucedido zera a contagem.
+     */
     @Transactional
-    SessaoAberta entrar(LoginRequest request) {
+    SessaoAberta entrar(LoginRequest request, String origem) {
+        String chave = LimiteDeTentativas.chave(request.email(), origem);
+        limite.registrarTentativa(chave);
+
         Usuario usuario = usuarios.findByEmail(Textos.normalizarEmail(request.email())).orElse(null);
         String hash = usuario == null ? null : usuario.getSenhaHash();
         if (!senhas.confere(request.senha(), hash) || !podeEntrar(usuario)) {
             throw new NaoAutenticadoException(CREDENCIAIS_INVALIDAS);
         }
+        limite.limpar(chave);
         if (senhas.precisaAtualizar(hash)) {
             usuario.definirSenha(senhas.hash(request.senha()));
         }

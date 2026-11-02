@@ -220,6 +220,79 @@ class AutenticacaoApiTest extends IntegracaoTest {
         assertThat(entrar("ana@barbearia.com", "senha-nova-456").getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
+    @Test
+    void bloqueiaOLoginDepoisDeCincoTentativasMesmoComASenhaCerta() {
+        cadastrar("carlos@gmail.com");
+        for (int i = 0; i < 5; i++) {
+            assertThat(entrarCru("carlos@gmail.com", "senha-errada-123").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+
+        var bloqueado = entrarCru("carlos@gmail.com", SENHA);
+
+        assertThat(bloqueado.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(bloqueado.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("900");
+        assertThat(detalhe(bloqueado)).isEqualTo("Muitas tentativas de login. Tente de novo em 15 min.");
+    }
+
+    @Test
+    void emailInexistenteTambemEhLimitadoComAMesmaResposta() {
+        for (int i = 0; i < 5; i++) {
+            assertThat(entrarCru("ninguem@gmail.com", SENHA).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+
+        assertThat(entrarCru("ninguem@gmail.com", SENHA).getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    @Test
+    void oLoginVoltaDepoisDeQuinzeMinutos() {
+        cadastrar("carlos@gmail.com");
+        for (int i = 0; i < 5; i++) {
+            entrarCru("carlos@gmail.com", "senha-errada-123");
+        }
+        assertThat(entrarCru("carlos@gmail.com", SENHA).getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+
+        relogio.ajustar(RelogioDeTeste.INICIAL.plus(Duration.ofMinutes(15)).plusSeconds(1));
+
+        assertThat(entrarCru("carlos@gmail.com", SENHA).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void loginBemSucedidoZeraAContagem() {
+        cadastrar("carlos@gmail.com");
+        for (int i = 0; i < 4; i++) {
+            entrarCru("carlos@gmail.com", "senha-errada-123");
+        }
+        assertThat(entrarCru("carlos@gmail.com", SENHA).getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        for (int i = 0; i < 4; i++) {
+            assertThat(entrarCru("carlos@gmail.com", "senha-errada-123").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+        assertThat(entrarCru("carlos@gmail.com", SENHA).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void bloqueioDeUmaContaNaoAtingeAsOutras() {
+        cadastrar("carlos@gmail.com");
+        cadastrar("bruno@gmail.com");
+        for (int i = 0; i < 6; i++) {
+            entrarCru("carlos@gmail.com", "senha-errada-123");
+        }
+
+        assertThat(entrarCru("carlos@gmail.com", SENHA).getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(entrarCru("bruno@gmail.com", SENHA).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void maiusculasNoEmailNaoBurlamOLimite() {
+        cadastrar("carlos@gmail.com");
+        String[] variacoes = {"carlos@gmail.com", "Carlos@gmail.com", "CARLOS@gmail.com", "carlos@GMAIL.com", "CARLOS@GMAIL.COM"};
+        for (String email : variacoes) {
+            entrarCru(email, "senha-errada-123");
+        }
+
+        assertThat(entrarCru("carlos@gmail.com", SENHA).getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    }
+
     private UUID cadastrarProfissionalComAcesso(String email, String senha) {
         UUID id = api.post().uri("/api/profissionais")
                 .contentType(MediaType.APPLICATION_JSON)

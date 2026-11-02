@@ -113,6 +113,7 @@ flowchart LR
 - Login com token de acesso JWT de 15 min, guardado só em memória no front, e refresh token num cookie `HttpOnly` com `SameSite=Strict`.
 - Cada renovação troca o refresh token. Se um token já trocado aparecer de novo, todas as sessões daquela família são revogadas.
 - No banco ficam só hashes: BCrypt nas senhas e SHA-256 nos refresh tokens.
+- O login aceita 5 tentativas por janela de 15 minutos para cada par e-mail + origem; a seguinte recebe `429` com `Retry-After`. A contagem fica na memória da instância; com várias instâncias, o item do Redis abaixo a compartilha.
 - Login inválido tem sempre a mesma mensagem e o mesmo tempo de resposta. Agendamento de outra pessoa responde `404`.
 - Toda rota exige login, exceto as públicas. As regras de dono ficam nos services, com testes para cada papel.
 

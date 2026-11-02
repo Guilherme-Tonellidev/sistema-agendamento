@@ -17,6 +17,11 @@ desenvolvimento: o perfil `prod` desliga o Swagger UI e o `/v3/api-docs`.
 | Notificações | `GET /api/notificacoes` (as 20 mais recentes e quantas faltam ler) · `PATCH /api/notificacoes/{id}/ler` · `PATCH /api/notificacoes/ler-todas` |
 | Agendamentos | `POST /api/agendamentos` · `POST /api/agendamentos/encaixe` · `GET /api/agendamentos` · `GET /api/agendamentos/{id}` · `PATCH .../{id}/cancelar`, `/reagendar`, `/concluir` e `/nao-compareceu` |
 
+`POST /api/auth/login` responde `429` (com `Retry-After`, em segundos) depois de 5 tentativas em 15 minutos para o mesmo
+e-mail e a mesma origem; um login correto zera a contagem. A origem é o endereço da conexão: atrás de um proxy reverso
+ela é a do proxy, então configure o servidor para confiar no `X-Forwarded-For` dele (e só nele) ou o limite passa a valer
+por e-mail para todos.
+
 As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
 (`page`, `size`, `sort`).
 

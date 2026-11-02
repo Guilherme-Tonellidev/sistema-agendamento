@@ -26,6 +26,7 @@ import com.guilhermetonelli.agendamento.shared.exception.ConflitoException;
 import com.guilhermetonelli.agendamento.shared.exception.NaoAutenticadoException;
 import com.guilhermetonelli.agendamento.shared.exception.RecursoNaoEncontradoException;
 import com.guilhermetonelli.agendamento.shared.exception.RegraDeNegocioException;
+import com.guilhermetonelli.agendamento.shared.exception.TentativasDemaisException;
 
 /**
  * Converte exceções em respostas no formato Problem Details (RFC 9457), o mesmo para toda a API.
@@ -51,6 +52,14 @@ class TratadorDeErros extends ResponseEntityExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     ResponseEntity<ProblemDetail> naoAutenticado(AuthenticationException ex) {
         return naoAutenticado("Faça login para continuar.");
+    }
+
+    @ExceptionHandler(TentativasDemaisException.class)
+    ResponseEntity<ProblemDetail> tentativasDemais(TentativasDemaisException ex) {
+        long segundos = Math.max(1, (ex.getEsperar().toMillis() + 999) / 1000);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(segundos))
+                .body(problema(HttpStatus.TOO_MANY_REQUESTS, "Muitas tentativas", ex.getMessage()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
