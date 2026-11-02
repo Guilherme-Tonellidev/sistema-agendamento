@@ -21,6 +21,7 @@ import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCancelado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
 import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
+import com.guilhermetonelli.agendamento.agendamento.evento.LembreteDeAgendamento;
 import com.guilhermetonelli.agendamento.seguranca.Papel;
 
 /**
@@ -75,6 +76,16 @@ class ConsumidorDeNotificacaoTest extends IntegracaoTest {
         UUID id = UUID.randomUUID();
 
         consumidor.tratar(new AgendamentoCancelado(id, barbeiro, id, SABADO, null, aviso(Papel.PROFISSIONAL)));
+
+        assertThat(linhas()).isEmpty();
+    }
+
+    @Test
+    void lembreteNaoGeraNotificacaoParaOBarbeiro() {
+        UUID id = UUID.randomUUID();
+
+        assertThatCode(() -> consumidor.tratar(new LembreteDeAgendamento(id, barbeiro, id, SABADO, aviso(null))))
+                .doesNotThrowAnyException();
 
         assertThat(linhas()).isEmpty();
     }

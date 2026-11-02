@@ -86,6 +86,12 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
+        <!-- Agendador: o job que envia os lembretes (versão do Quartz gerenciada pelo Spring Boot) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-quartz</artifactId>
+        </dependency>
+
         <!-- Testes -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

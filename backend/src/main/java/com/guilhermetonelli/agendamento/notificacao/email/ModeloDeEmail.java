@@ -13,6 +13,7 @@ import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
 import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
 import com.guilhermetonelli.agendamento.agendamento.evento.EventoDeAgendamento;
+import com.guilhermetonelli.agendamento.agendamento.evento.LembreteDeAgendamento;
 import com.guilhermetonelli.agendamento.notificacao.Quando;
 
 /** Monta o e-mail ao cliente a partir do evento: sem template, só texto e HTML escritos aqui. */
@@ -30,6 +31,8 @@ public final class ModeloDeEmail {
                     Map.of("Horário anterior", Quando.formatar(e.inicioAnterior(), fuso)));
             case AgendamentoCancelado e -> email(aviso, "Horário cancelado", "Seu horário foi cancelado.", e.inicio(), fuso,
                     e.motivo() == null || e.motivo().isBlank() ? Map.of() : Map.of("Motivo", e.motivo().strip()));
+            // A frase não diz "amanhã" nem "daqui a 1 hora": o mesmo texto serve para os dois prazos do lembrete.
+            case LembreteDeAgendamento e -> email(aviso, "Lembrete de horário", "Passando para lembrar do seu horário.", e.inicio(), fuso, Map.of());
         };
     }
 

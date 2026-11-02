@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /** Mudança na agenda, publicada como evento do Spring para quem precisar reagir (notificações, lembretes, cache). */
-public sealed interface EventoDeAgendamento permits AgendamentoCriado, AgendamentoCancelado, AgendamentoReagendado {
+public sealed interface EventoDeAgendamento permits AgendamentoCriado, AgendamentoCancelado, AgendamentoReagendado, LembreteDeAgendamento {
 
     UUID agendamentoId();
 

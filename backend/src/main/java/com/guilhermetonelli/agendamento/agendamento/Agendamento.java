@@ -14,9 +14,11 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
 import com.guilhermetonelli.agendamento.cliente.Cliente;
 import com.guilhermetonelli.agendamento.disponibilidade.Periodo;
 import com.guilhermetonelli.agendamento.profissional.Profissional;
+import com.guilhermetonelli.agendamento.seguranca.Papel;
 import com.guilhermetonelli.agendamento.servico.Servico;
 import com.guilhermetonelli.agendamento.shared.domain.EntidadeBase;
 import com.guilhermetonelli.agendamento.shared.domain.Textos;
@@ -56,6 +58,12 @@ public class Agendamento extends EntidadeBase {
 
     @Column(length = 200)
     private String motivoCancelamento;
+
+    /** Quando o lembrete deve sair; nulo se não há lembrete a mandar. */
+    private Instant lembrarEm;
+
+    /** Quando o broker confirmou o lembrete; só o job grava, direto no banco. */
+    private Instant lembreteEnviadoEm;
 
     protected Agendamento() {
         // exigido pelo JPA
@@ -97,8 +105,19 @@ public class Agendamento extends EntidadeBase {
         encerrar(StatusAgendamento.NAO_COMPARECEU, agora, "registrar a falta de");
     }
 
+    /** Vale para o horário atual: um lembrete já enviado de um horário antigo não conta para o novo. */
+    public void programarLembrete(Instant lembrarEm) {
+        this.lembrarEm = lembrarEm;
+        this.lembreteEnviadoEm = null;
+    }
+
     public Periodo horario() {
         return new Periodo(inicio, fim);
+    }
+
+    /** O preço é o gravado no agendamento, não o atual do serviço. */
+    public Aviso aviso(Papel autor) {
+        return new Aviso(autor, cliente.getNome(), cliente.getEmail(), profissional.getNome(), servico.getNome(), preco);
     }
 
     private void definirHorario(Periodo horario) {
@@ -169,5 +188,13 @@ public class Agendamento extends EntidadeBase {
 
     public String getMotivoCancelamento() {
         return motivoCancelamento;
+    }
+
+    public Instant getLembrarEm() {
+        return lembrarEm;
+    }
+
+    public Instant getLembreteEnviadoEm() {
+        return lembreteEnviadoEm;
     }
 }

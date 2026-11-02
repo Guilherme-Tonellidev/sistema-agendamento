@@ -8,10 +8,14 @@ import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
 import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
 import com.guilhermetonelli.agendamento.agendamento.evento.EventoDeAgendamento;
+import com.guilhermetonelli.agendamento.agendamento.evento.LembreteDeAgendamento;
 import com.guilhermetonelli.agendamento.seguranca.Papel;
 
 /** A frase do sino do barbeiro, já no horário da barbearia: quem fez o quê e para quando. */
 final class TextosDeNotificacao {
+
+    /** {@code RegrasDeAviso} barra o lembrete antes de chegar aqui. */
+    static final String SEM_LEMBRETE = "O barbeiro não recebe lembretes.";
 
     private TextosDeNotificacao() {}
 
@@ -26,6 +30,7 @@ final class TextosDeNotificacao {
             case AgendamentoReagendado e -> "%s remarcou %s de %s para %s."
                     .formatted(quem, oQue, quando(e.inicioAnterior(), fuso), quando(e.inicio(), fuso));
             case AgendamentoCancelado e -> "%s cancelou %s de %s.%s".formatted(quem, oQue, quando(e.inicio(), fuso), motivo(e.motivo()));
+            case LembreteDeAgendamento e -> throw new IllegalStateException(SEM_LEMBRETE);
         };
     }
 

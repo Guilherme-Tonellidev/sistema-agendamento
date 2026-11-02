@@ -30,7 +30,6 @@ import com.guilhermetonelli.agendamento.agendamento.dto.ReagendamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCancelado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
-import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
 import com.guilhermetonelli.agendamento.cliente.Cliente;
 import com.guilhermetonelli.agendamento.cliente.ClienteService;
 import com.guilhermetonelli.agendamento.disponibilidade.DisponibilidadeService;
@@ -140,7 +139,7 @@ public class AgendamentoService {
                 clienteId(agendamento),
                 agendamento.getInicio(),
                 agendamento.getMotivoCancelamento(),
-                aviso(agendamento, eu)));
+                agendamento.aviso(eu.papel())));
         return mapper.paraResponse(agendamento);
     }
 
@@ -163,6 +162,7 @@ public class AgendamentoService {
 
         Instant inicioAnterior = agendamento.getInicio();
         agendamento.reagendar(horario, agora, antecedencia);
+        agendamento.programarLembrete(lembrarEm(agendamento.getCliente(), horario.inicio(), agora));
         salvar(agendamento);
         eventos.publishEvent(new AgendamentoReagendado(
                 id,
@@ -171,7 +171,7 @@ public class AgendamentoService {
                 inicioAnterior,
                 horario.inicio(),
                 horario.fim(),
-                aviso(agendamento, eu)));
+                agendamento.aviso(eu.papel())));
         return mapper.paraResponse(agendamento);
     }
 
@@ -204,23 +204,18 @@ public class AgendamentoService {
         Periodo horario = disponibilidadeService.garantirHorarioNaAgenda(profissional, servico, inicio, antecedencia);
         garantirSemConflito(profissional.getId(), cliente.getId(), horario, Specification.unrestricted());
 
-        Agendamento agendamento = salvar(new Agendamento(profissional, servico, cliente, horario));
+        Agendamento novo = new Agendamento(profissional, servico, cliente, horario);
+        novo.programarLembrete(lembrarEm(cliente, horario.inicio(), Instant.now(clock)));
+        Agendamento agendamento = salvar(novo);
         eventos.publishEvent(new AgendamentoCriado(
                 agendamento.getId(), profissional.getId(), cliente.getId(), horario.inicio(), horario.fim(),
-                aviso(agendamento, eu)));
+                agendamento.aviso(eu.papel())));
         return mapper.paraResponse(agendamento);
     }
 
-    /** O preço é o gravado no agendamento, não o atual do serviço. */
-    private static Aviso aviso(Agendamento agendamento, UsuarioLogado eu) {
-        Cliente cliente = agendamento.getCliente();
-        return new Aviso(
-                eu.papel(),
-                cliente.getNome(),
-                cliente.getEmail(),
-                agendamento.getProfissional().getNome(),
-                agendamento.getServico().getNome(),
-                agendamento.getPreco());
+    /** Sem e-mail não há para onde mandar o lembrete. */
+    private Instant lembrarEm(Cliente cliente, Instant inicio, Instant agora) {
+        return cliente.getEmail() == null ? null : RegraDeLembrete.quando(agora, inicio, properties.lembrete());
     }
 
     private void garantirSemConflito(

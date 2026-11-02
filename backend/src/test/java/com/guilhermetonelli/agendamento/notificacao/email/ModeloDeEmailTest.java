@@ -16,6 +16,7 @@ import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCancelado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
 import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
+import com.guilhermetonelli.agendamento.agendamento.evento.LembreteDeAgendamento;
 import com.guilhermetonelli.agendamento.seguranca.Papel;
 
 /** Os modelos são funções puras: evento e fuso entram, assunto, texto e HTML saem. */
@@ -53,6 +54,19 @@ class ModeloDeEmailTest {
         Email email = montar(new AgendamentoCancelado(ID, ID, ID, SABADO, null, aviso("Carlos", "Corte", "Rafael", "45.00")));
 
         assertThat(email.assunto()).isEqualTo("Horário cancelado: Corte, sáb 24/10 às 14h30");
+    }
+
+    @Test
+    void lembreteTemAssuntoEFraseQueServemParaOsDoisPrazos() {
+        var evento = new LembreteDeAgendamento(ID, ID, ID, SABADO, aviso("Carlos Mendes", "Corte", "Rafael Souza", "45.00"));
+
+        Email email = montar(evento);
+
+        assertThat(email.para()).isEqualTo("carlos@exemplo.com");
+        assertThat(email.assunto()).isEqualTo("Lembrete de horário: Corte, sáb 24/10 às 14h30");
+        assertThat(email.texto()).contains("Passando para lembrar do seu horário.", "Carlos Mendes", "Rafael Souza", "R$ 45,00")
+                .doesNotContain("amanhã");
+        assertThat(email.html()).contains("Passando para lembrar do seu horário.", "Carlos Mendes", "Rafael Souza", "R$ 45,00");
     }
 
     @Test
