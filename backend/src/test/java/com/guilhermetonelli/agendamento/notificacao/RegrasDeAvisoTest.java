@@ -14,9 +14,13 @@ import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
 import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
 import com.guilhermetonelli.agendamento.agendamento.evento.EventoDeAgendamento;
+import com.guilhermetonelli.agendamento.agendamento.evento.LembreteDeAgendamento;
 import com.guilhermetonelli.agendamento.seguranca.Papel;
 
-/** Quem agiu já sabe; a reserva é a exceção para o cliente, que recebe o comprovante. */
+/**
+ * Quem agiu já sabe; a reserva é a exceção para o cliente, que recebe o comprovante. O lembrete vem do sistema:
+ * o cliente com e-mail o recebe, o barbeiro nunca.
+ */
 class RegrasDeAvisoTest {
 
     private static final Instant INICIO = Instant.parse("2026-10-24T17:30:00Z");
@@ -34,7 +38,9 @@ class RegrasDeAvisoTest {
         "CANCELADO,PROFISSIONAL,true,true,false",
         "CANCELADO,PROFISSIONAL,false,false,false",
         "CANCELADO,ADMIN,true,true,true",
-        "CANCELADO,ADMIN,false,false,true"
+        "CANCELADO,ADMIN,false,false,true",
+        "LEMBRETE,,true,true,false",
+        "LEMBRETE,,false,false,false"
     })
     void avisaQuemNaoAgiu(String tipo, Papel autor, boolean comEmail, boolean avisaCliente, boolean avisaProfissional) {
         Aviso aviso = new Aviso(
@@ -52,6 +58,7 @@ class RegrasDeAvisoTest {
             case "CRIADO" -> new AgendamentoCriado(id, id, id, INICIO, fim, aviso);
             case "REMARCADO" -> new AgendamentoReagendado(id, id, id, INICIO.minusSeconds(3600), INICIO, fim, aviso);
             case "CANCELADO" -> new AgendamentoCancelado(id, id, id, INICIO, "imprevisto", aviso);
+            case "LEMBRETE" -> new LembreteDeAgendamento(id, id, id, INICIO, aviso);
             default -> throw new IllegalArgumentException(tipo);
         };
     }

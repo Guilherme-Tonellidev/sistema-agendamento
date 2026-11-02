@@ -2,6 +2,7 @@ package com.guilhermetonelli.agendamento.mensageria;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.net.ConnectException;
@@ -43,6 +44,13 @@ class PublicadorDeEventosTest {
 
         assertThatCode(() -> new PublicadorDeEventos(rabbit).publicar(evento)).doesNotThrowAnyException();
         assertThat(saida).contains("ERROR").contains(evento.agendamentoId().toString());
+    }
+
+    @Test
+    void enviarLancaQuandoOBrokerFalha() {
+        var rabbit = rabbitQueFalha(new AmqpConnectException(new ConnectException("recusada")));
+
+        assertThatThrownBy(() -> new PublicadorDeEventos(rabbit).enviar(evento)).isInstanceOf(AmqpConnectException.class);
     }
 
     private static RabbitTemplate rabbitQueFalha(RuntimeException erro) {

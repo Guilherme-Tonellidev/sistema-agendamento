@@ -28,6 +28,19 @@ spring:
   flyway:
     locations: classpath:db/migration
 
+  quartz:
+    # Os lembretes saem de um job que varre o banco a cada minuto (pacote agendador). Job e gatilho ficam nas
+    # tabelas qrtz_*, criadas pela migração V9; com o cluster ligado, duas instâncias da API nunca varrem juntas.
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
+    overwrite-existing-jobs: true
+    wait-for-jobs-to-complete-on-shutdown: true
+    properties:
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.jobStore.isClustered: true
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+
   rabbitmq:
     # Broker parado ou travado não segura a requisição: conectar, handshake (MensageriaConfig), abrir e fechar
     # canal e esperar a confirmação têm limite de 2 s cada.

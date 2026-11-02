@@ -14,7 +14,7 @@ import com.guilhermetonelli.agendamento.agendamento.evento.EventoDeAgendamento;
  * Se o broker estiver fora, a reserva continua valendo e o aviso daquela vez se perde (fica no log).
  */
 @Component
-class PublicadorDeEventos {
+public class PublicadorDeEventos {
 
     private static final Logger log = LoggerFactory.getLogger(PublicadorDeEventos.class);
     private static final long CONFIRMACAO_MS = 2000;
@@ -32,14 +32,19 @@ class PublicadorDeEventos {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     void publicar(EventoDeAgendamento evento) {
         try {
-            rabbit.invoke(operacoes -> {
-                operacoes.convertAndSend(Topologia.EXCHANGE, Topologia.chaveDe(evento), evento);
-                operacoes.waitForConfirmsOrDie(CONFIRMACAO_MS);
-                return null;
-            });
+            enviar(evento);
         } catch (Exception e) {
             log.error("Não foi possível publicar {} do agendamento {}; o aviso desta vez se perde.",
                     evento.getClass().getSimpleName(), evento.agendamentoId(), e);
         }
+    }
+
+    /** Para quem precisa saber se a mensagem saiu: lança a exceção se o broker não confirmar a tempo. */
+    public void enviar(EventoDeAgendamento evento) {
+        rabbit.invoke(operacoes -> {
+            operacoes.convertAndSend(Topologia.EXCHANGE, Topologia.chaveDe(evento), evento);
+            operacoes.waitForConfirmsOrDie(CONFIRMACAO_MS);
+            return null;
+        });
     }
 }

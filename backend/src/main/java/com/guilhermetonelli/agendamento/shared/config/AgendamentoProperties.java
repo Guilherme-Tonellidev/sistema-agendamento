@@ -16,6 +16,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param antecedenciaMinimaReserva quanto tempo antes do início um horário ainda pode ser reservado
  * @param antecedenciaMinimaCancelamento até quanto tempo antes do início o cliente pode cancelar ou reagendar
  * @param notificacoes avisos enviados às pessoas quando a agenda muda
+ * @param lembrete quando o cliente é lembrado do horário marcado
  */
 @ConfigurationProperties("agendamento")
 public record AgendamentoProperties(
@@ -24,10 +25,30 @@ public record AgendamentoProperties(
         @DefaultValue("P90D") Period janelaDeReserva,
         @DefaultValue("PT1H30M") Duration antecedenciaMinimaReserva,
         @DefaultValue("PT2H") Duration antecedenciaMinimaCancelamento,
-        @DefaultValue Notificacoes notificacoes) {
+        @DefaultValue Notificacoes notificacoes,
+        @DefaultValue Lembrete lembrete) {
 
     /** @param remetente quem aparece como autor dos e-mails ({@code MAIL_REMETENTE} em produção) */
     public record Notificacoes(String remetente) {}
+
+    /**
+     * @param antecedencia quanto tempo antes do início o lembrete sai
+     * @param antecedenciaReservaTardia quanto tempo antes do início sai o lembrete de quem reservou com menos
+     *     de {@code antecedencia}: esse cliente recebe só este, e menos de uma hora de aviso não vale o e-mail
+     */
+    public record Lembrete(
+            @DefaultValue("PT24H") Duration antecedencia, @DefaultValue("PT1H") Duration antecedenciaReservaTardia) {
+
+        public Lembrete {
+            if (!antecedencia.isPositive()) {
+                throw new IllegalArgumentException("agendamento.lembrete.antecedencia deve ser positiva");
+            }
+            if (!antecedenciaReservaTardia.isPositive() || antecedenciaReservaTardia.compareTo(antecedencia) >= 0) {
+                throw new IllegalArgumentException(
+                        "agendamento.lembrete.antecedencia-reserva-tardia deve ser positiva e menor que agendamento.lembrete.antecedencia");
+            }
+        }
+    }
 
     public AgendamentoProperties {
         if (intervaloEntreHorarios.toSeconds() < 60) {

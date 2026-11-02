@@ -6,6 +6,8 @@ import static com.guilhermetonelli.agendamento.Cenario.AS_9H;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +23,8 @@ import com.guilhermetonelli.agendamento.Cenario.Cadastro;
 import com.guilhermetonelli.agendamento.IntegracaoTest;
 import com.guilhermetonelli.agendamento.Mailpit.EmailRecebido;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
+import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
+import com.guilhermetonelli.agendamento.agendamento.evento.LembreteDeAgendamento;
 import com.guilhermetonelli.agendamento.mensageria.Topologia;
 import com.guilhermetonelli.agendamento.seguranca.dto.LoginRequest;
 
@@ -133,6 +137,41 @@ class EmailDeAgendamentoTest extends IntegracaoTest {
         assertThat(filas.aguardarNa("email.cliente.dlq")).isNotNull();
         assertThat(filas.quantidadeNa(Topologia.FILA_EMAIL)).isZero();
         assertThat(mailpit.quantidade()).isZero();
+    }
+
+    @Test
+    void lembreteDeAgendamentoCanceladoNaoEnvia() {
+        UUID agendamento = cenario.reservar(comoCarlos, barbeiro, carlos.id(), AS_8H);
+        cenario.cancelar(comoCarlos, agendamento, null);
+
+        publicarLembrete(agendamento, AS_8H);
+        cenario.reservar(comoBarbeiro, barbeiro, carlos.id(), AS_9H);
+
+        assertThat(mailpit.aguardar(carlos.email(), 2)).extracting(EmailRecebido::assunto)
+                .containsExactlyInAnyOrder(
+                        "Horário confirmado: Corte, qua 21/10 às 8h00",
+                        "Horário confirmado: Corte, qua 21/10 às 9h00");
+    }
+
+    @Test
+    void lembreteDeHorarioAntigoNaoEnvia() {
+        UUID agendamento = cenario.reservar(comoCarlos, barbeiro, carlos.id(), AS_8H);
+        cenario.reagendar(api, agendamento, AS_8H30);
+
+        publicarLembrete(agendamento, AS_8H);
+        cenario.reservar(api, barbeiro, carlos.id(), AS_9H);
+
+        assertThat(mailpit.aguardar(carlos.email(), 3)).extracting(EmailRecebido::assunto)
+                .containsExactlyInAnyOrder(
+                        "Horário confirmado: Corte, qua 21/10 às 8h00",
+                        "Horário remarcado: Corte, qua 21/10 às 8h30",
+                        "Horário confirmado: Corte, qua 21/10 às 9h00");
+    }
+
+    private void publicarLembrete(UUID agendamento, String inicio) {
+        var aviso = new Aviso(null, "Carlos Mendes", carlos.email(), "Rafael Souza", "Corte", new BigDecimal("45.00"));
+        rabbit.convertAndSend(Topologia.EXCHANGE, "agendamento.lembrete",
+                new LembreteDeAgendamento(agendamento, barbeiro, carlos.id(), Instant.parse(inicio), aviso));
     }
 
     private static Message mensagem(String corpo, String tipo) {

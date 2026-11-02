@@ -17,6 +17,7 @@ import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCancelado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
 import com.guilhermetonelli.agendamento.agendamento.evento.EventoDeAgendamento;
+import com.guilhermetonelli.agendamento.agendamento.evento.LembreteDeAgendamento;
 
 /**
  * O que existe no RabbitMQ: uma exchange e, para cada consumidor, a sua fila e a fila de erros dela
@@ -35,6 +36,7 @@ public class Topologia {
             case AgendamentoCriado criado -> "agendamento.criado";
             case AgendamentoReagendado remarcado -> "agendamento.remarcado";
             case AgendamentoCancelado cancelado -> "agendamento.cancelado";
+            case LembreteDeAgendamento lembrete -> "agendamento.lembrete";
         };
     }
 

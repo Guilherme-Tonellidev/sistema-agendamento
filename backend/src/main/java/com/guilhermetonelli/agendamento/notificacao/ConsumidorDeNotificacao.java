@@ -9,6 +9,7 @@ import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCancelado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
 import com.guilhermetonelli.agendamento.agendamento.evento.EventoDeAgendamento;
+import com.guilhermetonelli.agendamento.agendamento.evento.LembreteDeAgendamento;
 import com.guilhermetonelli.agendamento.mensageria.Topologia;
 import com.guilhermetonelli.agendamento.profissional.ProfissionalService;
 import com.guilhermetonelli.agendamento.shared.config.AgendamentoProperties;
@@ -50,6 +51,7 @@ class ConsumidorDeNotificacao {
             case AgendamentoCriado e -> TipoDeNotificacao.CRIADO;
             case AgendamentoReagendado e -> TipoDeNotificacao.REMARCADO;
             case AgendamentoCancelado e -> TipoDeNotificacao.CANCELADO;
+            case LembreteDeAgendamento e -> throw new IllegalStateException(TextosDeNotificacao.SEM_LEMBRETE);
         };
     }
 }

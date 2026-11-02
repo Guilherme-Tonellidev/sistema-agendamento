@@ -14,10 +14,12 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import com.guilhermetonelli.agendamento.agendamento.LembretesDeTeste;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCancelado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
 import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
+import com.guilhermetonelli.agendamento.agendamento.evento.LembreteDeAgendamento;
 import com.guilhermetonelli.agendamento.notificacao.email.Email;
 import com.guilhermetonelli.agendamento.seguranca.Papel;
 import com.guilhermetonelli.agendamento.shared.config.AgendamentoProperties;
@@ -29,7 +31,7 @@ class ConsumidorDeEmailTest {
     private static final UUID ID = UUID.randomUUID();
 
     private final List<Email> enviados = new ArrayList<>();
-    private final ConsumidorDeEmail consumidor = new ConsumidorDeEmail(enviados::add, propriedades());
+    private final ConsumidorDeEmail consumidor = new ConsumidorDeEmail(enviados::add, propriedades(), LembretesDeTeste.que(lembrete -> true));
 
     @Test
     void reservaEnviaOComprovanteComOHorarioNoFusoDaBarbearia() {
@@ -67,10 +69,44 @@ class ConsumidorDeEmailTest {
 
     @Test
     void falhaNoEnvioSobeParaAcionarAsTentativas() {
-        var falho = new ConsumidorDeEmail(email -> { throw new IllegalStateException("SMTP fora do ar"); }, propriedades());
+        var falho = new ConsumidorDeEmail(email -> { throw new IllegalStateException("SMTP fora do ar"); }, propriedades(), LembretesDeTeste.que(lembrete -> true));
 
         assertThatThrownBy(() -> falho.tratar(new AgendamentoCriado(ID, ID, ID, INICIO, INICIO, aviso(Papel.CLIENTE, "carlos@exemplo.com"))))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void lembreteQueAindaValeEnviaOEmail() {
+        consumidor.tratar(lembrete(aviso(null, "carlos@exemplo.com")));
+
+        assertThat(enviados).singleElement().satisfies(email -> {
+            assertThat(email.para()).isEqualTo("carlos@exemplo.com");
+            assertThat(email.assunto()).isEqualTo("Lembrete de horário: Corte, sáb 24/10 às 14h30");
+        });
+    }
+
+    @Test
+    void lembreteQueDeixouDeValerNaoEnvia() {
+        var consumidor = new ConsumidorDeEmail(enviados::add, propriedades(), LembretesDeTeste.que(lembrete -> false));
+
+        consumidor.tratar(lembrete(aviso(null, "carlos@exemplo.com")));
+
+        assertThat(enviados).isEmpty();
+    }
+
+    @Test
+    void lembreteSemEmailNaoConsultaNemEnvia() {
+        var consumidor = new ConsumidorDeEmail(enviados::add, propriedades(), LembretesDeTeste.que(lembrete -> {
+            throw new AssertionError("sem e-mail não há o que conferir");
+        }));
+
+        consumidor.tratar(lembrete(aviso(null, null)));
+
+        assertThat(enviados).isEmpty();
+    }
+
+    private static LembreteDeAgendamento lembrete(Aviso aviso) {
+        return new LembreteDeAgendamento(ID, ID, ID, INICIO, aviso);
     }
 
     private static Aviso aviso(Papel autor, String email) {
@@ -79,6 +115,7 @@ class ConsumidorDeEmailTest {
 
     private static AgendamentoProperties propriedades() {
         return new AgendamentoProperties(ZoneId.of("America/Sao_Paulo"), Duration.ofMinutes(15), Period.ofDays(90), Duration.ZERO, Duration.ZERO,
-                new AgendamentoProperties.Notificacoes("Barbearia <b@exemplo.com>"));
+                new AgendamentoProperties.Notificacoes("Barbearia <b@exemplo.com>"),
+                new AgendamentoProperties.Lembrete(Duration.ofHours(24), Duration.ofHours(1)));
     }
 }

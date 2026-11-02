@@ -31,7 +31,9 @@ import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
 @TestPropertySource(properties = {
     "spring.rabbitmq.listener.simple.retry.initial-interval=50ms",
     "spring.rabbitmq.listener.simple.retry.multiplier=1",
-    "spring.rabbitmq.listener.simple.retry.max-interval=50ms"
+    "spring.rabbitmq.listener.simple.retry.max-interval=50ms",
+    // O gatilho de 1 minuto mandaria e-mails no meio de testes que não os esperam; quem testa o Quartz liga o agendador.
+    "spring.quartz.auto-startup=false"
 })
 @Import({TestcontainersConfiguration.class, RelogioDeTeste.class, EventosPublicados.class, Filas.class, Mailpit.class, EnviadorQueFalha.class})
 public abstract class IntegracaoTest {
@@ -109,6 +111,7 @@ public abstract class IntegracaoTest {
         List<String> tabelas = jdbc.queryForList("""
                 SELECT tablename FROM pg_tables
                 WHERE schemaname = 'public' AND tablename <> 'flyway_schema_history'
+                  AND tablename NOT LIKE 'qrtz!_%' ESCAPE '!'
                 """, String.class);
         if (!tabelas.isEmpty()) {
             jdbc.execute("TRUNCATE " + String.join(", ", tabelas) + " CASCADE");
