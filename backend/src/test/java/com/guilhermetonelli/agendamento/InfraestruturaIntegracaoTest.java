@@ -14,6 +14,13 @@ class InfraestruturaIntegracaoTest extends IntegracaoTest {
     }
 
     @Test
+    void redisEstaNoAr() {
+        redis.definir("teste:ping", "ok");
+
+        assertThat(redis.valor("teste:ping")).isEqualTo("ok");
+    }
+
+    @Test
     void healthDeveResponderUp() {
         var resposta = api.get().uri("/actuator/health").retrieve().toEntity(String.class);
 

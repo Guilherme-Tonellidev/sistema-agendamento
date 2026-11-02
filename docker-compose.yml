@@ -1,5 +1,5 @@
-# Infraestrutura de desenvolvimento. Cada serviço entra quando a etapa do roadmap precisar dele
-# (Redis na etapa 9).
+# Infraestrutura de desenvolvimento: PostgreSQL, RabbitMQ, Redis e Mailpit. Cada serviço entrou quando a etapa
+# do roadmap precisou dele.
 name: agendamento
 
 services:
@@ -37,6 +37,19 @@ services:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
+      retries: 10
+
+  # Limite de tentativas de login e cache de horários livres. Sem dados no disco: perder o conteúdo só esvazia o cache.
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      # Só neste computador: sem senha, o Redis não pode ficar aberto para a rede.
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
       retries: 10
 
   # Servidor de e-mail de mentira: recebe tudo e mostra numa caixa de entrada, sem enviar a ninguém.

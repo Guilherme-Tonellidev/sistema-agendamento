@@ -22,12 +22,12 @@ import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
 
 /**
  * Base dos testes de integração: aplicação completa numa porta aleatória, PostgreSQL real,
- * relógio controlado, eventos registrados e banco, filas e caixa de e-mail limpos antes de cada teste.
+ * relógio controlado, eventos registrados e banco, filas, Redis e caixa de e-mail limpos antes de cada teste.
  *
  * <p>{@link #api} fala como administrador. Os testes de autorização usam {@link #apiComo} e {@link #apiAnonima}.
  *
  * <p>Todas as classes que estendem esta compartilham o mesmo contexto do Spring e o mesmo
- * container, então PostgreSQL, RabbitMQ e Mailpit sobem uma vez só por execução.
+ * container, então PostgreSQL, RabbitMQ, Redis e Mailpit sobem uma vez só por execução.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 // A aplicação não tem mais perfil padrão: o local dá a chave JWT e os dados de exemplo que estes testes usam.
@@ -39,7 +39,7 @@ import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
     // O gatilho de 1 minuto mandaria e-mails no meio de testes que não os esperam; quem testa o Quartz liga o agendador.
     "spring.quartz.auto-startup=false"
 })
-@Import({TestcontainersConfiguration.class, RelogioDeTeste.class, EventosPublicados.class, Filas.class, Mailpit.class, EnviadorQueFalha.class})
+@Import({TestcontainersConfiguration.class, RelogioDeTeste.class, EventosPublicados.class, Filas.class, Mailpit.class, RedisDeTeste.class, EnviadorQueFalha.class})
 public abstract class IntegracaoTest {
 
     @Value("${local.server.port}")
@@ -59,6 +59,9 @@ public abstract class IntegracaoTest {
 
     @Autowired
     protected Mailpit mailpit;
+
+    @Autowired
+    protected RedisDeTeste redis;
 
     @Autowired
     protected EnviadorQueFalha enviador;
@@ -81,7 +84,8 @@ public abstract class IntegracaoTest {
         filas.religarConsumidores();
         mailpit.limpar();
         relogio.reiniciar();
-        // O contexto é compartilhado: sem isso, as tentativas de login de um teste bloqueariam o seguinte.
+        // O contexto é compartilhado: sem isso, as tentativas de login e o cache de um teste valeriam para o seguinte.
+        redis.limpar();
         limiteDeLogin.reiniciar();
         eventos.limpar();
         api = apiComo(new UsuarioLogado(UUID.randomUUID(), Papel.ADMIN, null, null));

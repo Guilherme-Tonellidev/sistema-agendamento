@@ -11,7 +11,7 @@ import org.testcontainers.rabbitmq.RabbitMQContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Sobe PostgreSQL, RabbitMQ e Mailpit reais em contêineres para os testes. O {@code @ServiceConnection}
+ * Sobe PostgreSQL, RabbitMQ, Redis e Mailpit reais em contêineres para os testes. O {@code @ServiceConnection}
  * entrega a conexão ao Spring sem configurar nada à mão; o Mailpit não tem suporte pronto, então o
  * SMTP e a API dele entram por propriedades.
  */
@@ -20,8 +20,10 @@ public class TestcontainersConfiguration {
 
     static final DockerImageName POSTGRES = DockerImageName.parse("postgres:18-alpine");
     static final DockerImageName RABBITMQ = DockerImageName.parse("rabbitmq:4-management-alpine");
+    static final DockerImageName REDIS = DockerImageName.parse("redis:8-alpine");
     static final DockerImageName MAILPIT = DockerImageName.parse("axllent/mailpit");
 
+    private static final int PORTA_DO_REDIS = 6379;
     private static final int SMTP = 1025;
     private static final int API = 8025;
 
@@ -35,6 +37,13 @@ public class TestcontainersConfiguration {
     @ServiceConnection
     RabbitMQContainer rabbitContainer() {
         return new RabbitMQContainer(RABBITMQ);
+    }
+
+    @Bean
+    @ServiceConnection(name = "redis")
+    @SuppressWarnings("resource") // o Spring sobe e para o contêiner junto com o contexto
+    GenericContainer<?> redisContainer() {
+        return new GenericContainer<>(REDIS).withExposedPorts(PORTA_DO_REDIS);
     }
 
     @Bean
