@@ -38,8 +38,9 @@ public class LimiteDeTentativas {
         this.falhas = falhas;
     }
 
+    /** Um IPv6 vale pelo seu bloco /64 (veja {@link Origem}), para trocar de endereço não zerar a contagem. */
     static String chave(String email, String origem) {
-        return Textos.normalizarEmail(email) + "|" + origem;
+        return Textos.normalizarEmail(email) + "|" + Origem.agrupar(origem);
     }
 
     /** Conta mais uma tentativa ou, se o limite da janela já foi alcançado, lança {@link TentativasDemaisException}. */
