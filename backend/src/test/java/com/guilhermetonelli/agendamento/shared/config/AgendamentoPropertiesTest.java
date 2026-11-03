@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 
+import com.guilhermetonelli.agendamento.shared.config.AgendamentoProperties.CacheHorarios;
 import com.guilhermetonelli.agendamento.shared.config.AgendamentoProperties.Lembrete;
 
 class AgendamentoPropertiesTest {
@@ -23,6 +24,21 @@ class AgendamentoPropertiesTest {
 
         assertThat(propriedades.lembrete().antecedencia()).isEqualTo(UM_DIA);
         assertThat(propriedades.lembrete().antecedenciaReservaTardia()).isEqualTo(Duration.ofHours(1));
+    }
+
+    @Test
+    void padraoDoCacheDeHorariosEDeDoisMinutos() {
+        var propriedades = new Binder(new MapConfigurationPropertySource(Map.of()))
+                .bindOrCreate("agendamento", AgendamentoProperties.class);
+
+        assertThat(propriedades.cacheHorarios().ttl()).isEqualTo(Duration.ofMinutes(2));
+    }
+
+    @Test
+    void ttlDoCacheNaoPositivoEhRecusado() {
+        assertThatThrownBy(() -> new CacheHorarios(Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("agendamento.cache-horarios.ttl deve ser positivo");
     }
 
     @Test

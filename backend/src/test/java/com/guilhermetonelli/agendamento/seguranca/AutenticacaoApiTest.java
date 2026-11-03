@@ -268,7 +268,8 @@ class AutenticacaoApiTest extends IntegracaoTest {
         }
         assertThat(entrarCru("carlos@gmail.com", SENHA).getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
-        relogio.ajustar(RelogioDeTeste.INICIAL.plus(Duration.ofMinutes(15)).plusSeconds(1));
+        // O prazo da janela vive no Redis, que não usa o relógio de teste: a chave expira por conta própria.
+        redis.expirar(redis.chaves("login:*").getFirst(), Duration.ofMillis(1));
 
         assertThat(entrarCru("carlos@gmail.com", SENHA).getStatusCode()).isEqualTo(HttpStatus.OK);
     }

@@ -2,15 +2,38 @@ package com.guilhermetonelli.agendamento;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Properties;
+
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 
 class InfraestruturaIntegracaoTest extends IntegracaoTest {
+
+    @Autowired
+    private StringRedisTemplate template;
 
     @Test
     void rabbitmqEMailpitEstaoNoAr() {
         assertThat(filas.quantidadeNa("fila.que.nao.existe")).isZero();
         assertThat(mailpit.para("ninguem@exemplo.com")).isEmpty();
+    }
+
+    @Test
+    void redisEstaNoAr() {
+        redis.definir("teste:ping", "ok");
+
+        assertThat(redis.valor("teste:ping")).isEqualTo("ok");
+    }
+
+    /** Com pontos de salvamento, o FLUSHALL de cada teste grava um snapshot em disco e pode passar do timeout de 300 ms. */
+    @Test
+    void redisDeTesteNaoGravaSnapshots() {
+        Properties configuracao = template.execute((RedisCallback<Properties>) conexao -> conexao.serverCommands().getConfig("save"));
+
+        assertThat(configuracao).containsEntry("save", "");
     }
 
     @Test

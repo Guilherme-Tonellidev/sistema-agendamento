@@ -17,6 +17,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param antecedenciaMinimaCancelamento até quanto tempo antes do início o cliente pode cancelar ou reagendar
  * @param notificacoes avisos enviados às pessoas quando a agenda muda
  * @param lembrete quando o cliente é lembrado do horário marcado
+ * @param cacheHorarios cache dos horários livres no Redis
  */
 @ConfigurationProperties("agendamento")
 public record AgendamentoProperties(
@@ -26,7 +27,8 @@ public record AgendamentoProperties(
         @DefaultValue("PT1H30M") Duration antecedenciaMinimaReserva,
         @DefaultValue("PT2H") Duration antecedenciaMinimaCancelamento,
         @DefaultValue Notificacoes notificacoes,
-        @DefaultValue Lembrete lembrete) {
+        @DefaultValue Lembrete lembrete,
+        @DefaultValue CacheHorarios cacheHorarios) {
 
     /** @param remetente quem aparece como autor dos e-mails ({@code MAIL_REMETENTE} em produção) */
     public record Notificacoes(String remetente) {}
@@ -46,6 +48,19 @@ public record AgendamentoProperties(
             if (!antecedenciaReservaTardia.isPositive() || antecedenciaReservaTardia.compareTo(antecedencia) >= 0) {
                 throw new IllegalArgumentException(
                         "agendamento.lembrete.antecedencia-reserva-tardia deve ser positiva e menor que agendamento.lembrete.antecedencia");
+            }
+        }
+    }
+
+    /**
+     * @param ttl por quanto tempo uma consulta de horários livres fica guardada; também é o quanto um horário velho
+     *     pode aparecer se o Redis estiver fora do ar quando a agenda mudar
+     */
+    public record CacheHorarios(@DefaultValue("PT2M") Duration ttl) {
+
+        public CacheHorarios {
+            if (!ttl.isPositive()) {
+                throw new IllegalArgumentException("agendamento.cache-horarios.ttl deve ser positivo");
             }
         }
     }

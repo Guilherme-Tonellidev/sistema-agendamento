@@ -70,6 +70,11 @@ spring:
       mail.smtp.starttls.enable: true
 
   data:
+    redis:
+      # Redis parado ou travado não segura login nem consulta: conectar e esperar cada resposta têm limite de 300 ms
+      # (RedisConfig faz o comando falhar na hora quando a conexão está caída).
+      timeout: 300ms
+      connect-timeout: 300ms
     web:
       pageable:
         # Impede que um cliente peça uma página gigante e derrube o banco.
@@ -110,10 +115,13 @@ springdoc:
 
 management:
   health:
-    # Broker ou SMTP fora do ar não derrubam a API: a reserva continua funcionando, só os avisos param.
+    # Broker, SMTP ou Redis fora do ar não derrubam a API: a reserva continua funcionando, só os avisos param, e o
+    # login e a consulta de horários seguem sem o Redis.
     rabbit:
       enabled: false
     mail:
+      enabled: false
+    redis:
       enabled: false
   endpoints:
     web:

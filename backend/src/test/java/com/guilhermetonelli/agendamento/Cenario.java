@@ -56,6 +56,11 @@ public class Cenario {
                 .id();
     }
 
+    /** O serviço único do cenário: corte de 30 minutos. */
+    public UUID corte() {
+        return corte;
+    }
+
     public UUID barbeiro(String nome) {
         UUID id = admin.post().uri("/api/profissionais")
                 .contentType(MediaType.APPLICATION_JSON)

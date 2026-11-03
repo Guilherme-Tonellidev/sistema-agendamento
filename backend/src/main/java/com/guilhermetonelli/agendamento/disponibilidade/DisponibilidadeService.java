@@ -36,6 +36,7 @@ public class DisponibilidadeService {
     private final DisponibilidadeMapper mapper;
     private final AgendamentoProperties properties;
     private final Clock clock;
+    private final CacheDeHorarios cache;
     private final CalculadoraDeHorarios calculadora;
 
     DisponibilidadeService(
@@ -46,7 +47,8 @@ public class DisponibilidadeService {
             AgendamentosAtivos agendamentosAtivos,
             DisponibilidadeMapper mapper,
             AgendamentoProperties properties,
-            Clock clock) {
+            Clock clock,
+            CacheDeHorarios cache) {
         this.profissionalService = profissionalService;
         this.servicoService = servicoService;
         this.jornadaService = jornadaService;
@@ -55,6 +57,7 @@ public class DisponibilidadeService {
         this.mapper = mapper;
         this.properties = properties;
         this.clock = clock;
+        this.cache = cache;
         this.calculadora = new CalculadoraDeHorarios(properties.fusoHorario(), properties.intervaloEntreHorarios());
     }
 
@@ -109,14 +112,22 @@ public class DisponibilidadeService {
         }
         garantirDentroDaJanela(data, hoje);
 
-        Periodo dia = Periodo.doDia(data, properties.fusoHorario());
-        List<Periodo> ocupados = Stream.concat(
-                        bloqueioService.bloqueados(profissionalId, dia).stream(),
-                        agendamentosAtivos.doProfissional(profissionalId, dia).stream().map(AgendamentoAtivo::horario))
-                .toList();
-        return livres(profissional, servico, data, ocupados, agora.plus(antecedencia)).stream()
+        Instant inicioMinimo = agora.plus(antecedencia);
+        return cache.livres(profissionalId, servico.getDuracaoMinutos(), data, () -> livresDoDia(profissional, servico, data))
+                .stream()
+                .filter(horario -> !horario.inicio().isBefore(inicioMinimo))
                 .map(mapper::paraResponse)
                 .toList();
+    }
+
+    /** Os horários do dia sem o filtro de antecedência, que muda a cada instante e por isso não vai para o cache. */
+    private List<Periodo> livresDoDia(Profissional profissional, Servico servico, LocalDate data) {
+        Periodo dia = Periodo.doDia(data, properties.fusoHorario());
+        List<Periodo> ocupados = Stream.concat(
+                        bloqueioService.bloqueados(profissional.getId(), dia).stream(),
+                        agendamentosAtivos.doProfissional(profissional.getId(), dia).stream().map(AgendamentoAtivo::horario))
+                .toList();
+        return livres(profissional, servico, data, ocupados, Instant.MIN);
     }
 
     private List<Periodo> livres(
