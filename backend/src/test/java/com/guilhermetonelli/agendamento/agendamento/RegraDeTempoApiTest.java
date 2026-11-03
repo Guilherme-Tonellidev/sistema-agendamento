@@ -1,6 +1,7 @@
 package com.guilhermetonelli.agendamento.agendamento;
 
 import static com.guilhermetonelli.agendamento.Cenario.AS_8H;
+import static com.guilhermetonelli.agendamento.Cenario.AS_8H30;
 import static com.guilhermetonelli.agendamento.Cenario.AS_9H;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,6 +22,7 @@ import com.guilhermetonelli.agendamento.IntegracaoTest;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoResponse;
 import com.guilhermetonelli.agendamento.agendamento.dto.ReagendamentoRequest;
+import com.guilhermetonelli.agendamento.disponibilidade.dto.BloqueioRequest;
 import com.jayway.jsonpath.JsonPath;
 
 /**
@@ -99,6 +101,30 @@ class RegraDeTempoApiTest extends IntegracaoTest {
         assertThat(reservar(api, ana, diana, "2026-10-21T16:00:00Z")).satisfies(regraDeNegocio("jornada"));
         assertThat(reservar(api, ana, diana, "2026-10-21T11:05:00Z")).satisfies(regraDeNegocio("a cada 15 minutos"));
         assertThat(reservar(api, ana, diana, AS_8H)).satisfies(conflito("o profissional já tem"));
+        assertThat(reservar(api, ana, diana, "+300000-01-01T11:00:00Z")).satisfies(regraDeNegocio("entre os anos"));
+        assertThat(reservar(api, ana, diana, "+10000-01-05T11:00:00Z")).satisfies(regraDeNegocio("entre os anos"));
+    }
+
+    @Test
+    void adminNaoReservaDentroDeBloqueio() {
+        bloquear(ana, AS_9H, "2026-10-21T13:00:00Z");
+
+        assertThat(reservar(api, ana, diana, "2026-10-21T12:15:00Z")).satisfies(regraDeNegocio("bloqueado"));
+        assertThat(reservar(api, ana, diana, "2026-10-21T13:00:00Z").getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    void profissionalReagendaParaMenosDe1h30MasNaoParaOPassado() {
+        UUID agendamento = cenario.reservar(api, ana, carlos.id(), AS_9H);
+        relogio.ajustar(Instant.parse("2026-10-21T11:20:00Z"));
+        var daAna = apiComo(comoProfissional(ana));
+
+        var emDezMinutos = reagendar(daAna, agendamento, AS_8H30);
+        var noPassado = reagendar(daAna, agendamento, AS_8H);
+
+        assertThat(emDezMinutos.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(noPassado).satisfies(regraDeNegocio("passou"));
+        assertThat(buscar(agendamento).inicio()).isEqualTo(Instant.parse(AS_8H30));
     }
 
     @Test
@@ -116,6 +142,15 @@ class RegraDeTempoApiTest extends IntegracaoTest {
                 .body(new AgendamentoRequest(barbeiro, cenario.corte(), cliente.id(), Instant.parse(inicio)))
                 .retrieve()
                 .toEntity(String.class);
+    }
+
+    private void bloquear(UUID barbeiro, String inicio, String fim) {
+        var resposta = api.post().uri("/api/profissionais/{id}/bloqueios", barbeiro)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new BloqueioRequest(Instant.parse(inicio), Instant.parse(fim), null))
+                .retrieve()
+                .toBodilessEntity();
+        assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     }
 
     private ResponseEntity<String> cancelar(RestClient quem, UUID agendamento) {

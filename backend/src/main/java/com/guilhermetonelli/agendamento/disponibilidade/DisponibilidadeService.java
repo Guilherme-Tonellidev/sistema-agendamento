@@ -19,6 +19,7 @@ import com.guilhermetonelli.agendamento.servico.Servico;
 import com.guilhermetonelli.agendamento.servico.ServicoService;
 import com.guilhermetonelli.agendamento.shared.config.AgendamentoProperties;
 import com.guilhermetonelli.agendamento.shared.domain.Antecedencia;
+import com.guilhermetonelli.agendamento.shared.domain.FaixaDeDatas;
 import com.guilhermetonelli.agendamento.shared.domain.Textos;
 import com.guilhermetonelli.agendamento.shared.exception.RegraDeNegocioException;
 
@@ -85,6 +86,8 @@ public class DisponibilidadeService {
             garantirNoPrazo(inicio, agora, antecedencia.minima());
             garantirDentroDaJanela(data, hoje(agora));
         }
+        // Sem a janela de reserva, o banco ainda recusa anos absurdos.
+        FaixaDeDatas.garantirNaFaixa(data);
         if (!calculadora.alinhado(inicio)) {
             throw new RegraDeNegocioException("Os horários começam a cada %d minutos."
                     .formatted(properties.intervaloEntreHorarios().toMinutes()));
