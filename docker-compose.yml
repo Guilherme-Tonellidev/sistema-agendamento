@@ -4,7 +4,7 @@ name: agendamento
 
 services:
   postgres:
-    image: postgres:18-alpine
+    image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-agendamento}
       POSTGRES_USER: ${POSTGRES_USER:-agendamento}
@@ -41,7 +41,7 @@ services:
 
   # Limite de tentativas de login e cache de horários livres. Sem dados no disco: perder o conteúdo só esvazia o cache.
   redis:
-    image: redis:8-alpine
+    image: redis:8-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     ports:
       # Só neste computador: sem senha, o Redis não pode ficar aberto para a rede.
