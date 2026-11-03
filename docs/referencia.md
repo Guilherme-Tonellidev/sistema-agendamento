@@ -20,8 +20,9 @@ desenvolvimento: o perfil `prod` desliga o Swagger UI e o `/v3/api-docs`.
 `POST /api/auth/login` responde `429` (com `Retry-After`, em segundos) depois de 5 tentativas em 15 minutos para o mesmo
 e-mail e a mesma origem; um login correto zera a contagem. A contagem fica no Redis e vale entre as instâncias da API;
 com o Redis fora do ar, o login segue e cada instância conta por conta própria, na memória. A origem é o endereço da
-conexão: atrás de um proxy reverso ela é a do proxy, então configure o servidor para confiar no `X-Forwarded-For` dele
-(e só nele) ou o limite passa a valer por e-mail para todos.
+conexão: atrás de um proxy reverso ela é a do proxy, então o servidor precisa confiar no `X-Forwarded-For` dele (e só
+nele) ou o limite passa a valer por e-mail para todos. O `docker-compose.prod.yml` já faz isso (`SERVER_FORWARD_HEADERS_STRATEGY=native`)
+e publica a porta da API só em `127.0.0.1`: ponha o proxy reverso, com TLS, no mesmo host. Fora do Compose, repita as duas coisas.
 
 As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
 (`page`, `size`, `sort`). Nas listagens públicas de serviços e profissionais, quem não é administrador só vê itens

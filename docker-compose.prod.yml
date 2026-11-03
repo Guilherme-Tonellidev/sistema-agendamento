@@ -82,8 +82,12 @@ services:
       MAIL_USUARIO: ${MAIL_USUARIO:-}
       MAIL_SENHA: ${MAIL_SENHA:-}
       MAIL_REMETENTE: "${MAIL_REMETENTE:-Barbearia Tonelli <nao-responder@localhost>}"
+      # O limite de login conta por endereço de origem: o proxy reverso do host manda o do cliente em X-Forwarded-For.
+      SERVER_FORWARD_HEADERS_STRATEGY: native
+    # Só o proxy reverso do próprio host (que termina o TLS) alcança a API. Com a porta aberta para a internet, qualquer
+    # cliente forjaria o X-Forwarded-For e fugiria do limite de login.
     ports:
-      - "${API_PORT:-8080}:8080"
+      - "127.0.0.1:${API_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
       interval: 10s
