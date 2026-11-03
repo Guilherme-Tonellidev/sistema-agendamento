@@ -121,6 +121,7 @@ E-mail, RabbitMQ e Redis (no perfil `local` já apontam para o Compose):
 | `SPRING_RABBITMQ_HOST` | `localhost` | Endereço do RabbitMQ (porta, usuário e senha: `SPRING_RABBITMQ_PORT`, `_USERNAME` e `_PASSWORD`; padrão `5672`, `guest`, `guest`) |
 | `SPRING_DATA_REDIS_HOST` | `localhost` | Endereço do Redis (porta: `SPRING_DATA_REDIS_PORT`, padrão `6379`) |
 | `SPRING_DATA_REDIS_PASSWORD` | vazio | Senha do Redis. Em produção a API a recebe do `REDIS_PASSWORD` do Compose |
+| `SPRING_DATA_REDIS_SSL_ENABLED` | `false` | Liga o TLS na conexão com o Redis. Obrigatório com um Redis fora da rede interna (serviço gerenciado) |
 | `REDIS_PASSWORD` | sem padrão | Só no `docker-compose.prod.yml` e obrigatória: a senha que o Compose define no Redis e entrega à API |
 
 Os erros seguem o padrão Problem Details (RFC 9457):
@@ -161,6 +162,10 @@ precisam também de um RabbitMQ (`SPRING_RABBITMQ_HOST`, `SPRING_RABBITMQ_USERNA
 `SPRING_RABBITMQ_PASSWORD`), de um servidor SMTP (`MAIL_*`, abaixo) e de um Redis (`SPRING_DATA_REDIS_HOST` e, se ele
 tiver senha, `SPRING_DATA_REDIS_PASSWORD`). Sem o Redis a API segue de pé: o limite de login passa a contar só na memória
 de cada instância, e a consulta de horários vai direto ao banco.
+
+Com um Redis gerenciado, ou qualquer um que a API alcance pela internet, defina `SPRING_DATA_REDIS_SSL_ENABLED=true`
+(e use a porta TLS do serviço). Sem isso a senha do Redis e as contagens de login, que levam um hash do e-mail, viajam
+sem criptografia. Só o Redis do `docker-compose.prod.yml`, que fica na rede interna do Compose, dispensa o TLS.
 
 ## Docker Compose de desenvolvimento
 
