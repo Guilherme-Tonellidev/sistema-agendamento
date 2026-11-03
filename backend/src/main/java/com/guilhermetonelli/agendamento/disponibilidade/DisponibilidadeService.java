@@ -64,12 +64,17 @@ public class DisponibilidadeService {
     }
 
     public List<HorarioLivreResponse> horariosLivres(UUID profissionalId, UUID servicoId, LocalDate data) {
-        return horariosLivres(profissionalId, servicoId, data, properties.antecedenciaMinimaReserva());
+        return horariosLivres(profissionalId, servicoId, data, Antecedencia.de(properties.antecedenciaMinimaReserva()));
     }
 
     /** Para encaixar quem chegou sem reserva: os horários começam agora, sem antecedência mínima. */
     public List<HorarioLivreResponse> horariosParaEncaixe(UUID profissionalId, UUID servicoId, LocalDate data) {
-        return horariosLivres(profissionalId, servicoId, data, Duration.ZERO);
+        return horariosLivres(profissionalId, servicoId, data, Antecedencia.NENHUMA);
+    }
+
+    /** Para o administrador, que agenda em qualquer dia: inclui o que já passou e o que está além da janela de reserva. */
+    public List<HorarioLivreResponse> horariosSemLimite(UUID profissionalId, UUID servicoId, LocalDate data) {
+        return horariosLivres(profissionalId, servicoId, data, Antecedencia.LIVRE);
     }
 
     /**
@@ -103,19 +108,24 @@ public class DisponibilidadeService {
     }
 
     private List<HorarioLivreResponse> horariosLivres(
-            UUID profissionalId, UUID servicoId, LocalDate data, Duration antecedencia) {
+            UUID profissionalId, UUID servicoId, LocalDate data, Antecedencia antecedencia) {
         Profissional profissional = profissionalService.obterComServicos(profissionalId);
         Servico servico = servicoService.obter(servicoId);
         garantirQuePodeAtender(profissional, servico);
 
         Instant agora = Instant.now(clock);
-        LocalDate hoje = hoje(agora);
-        if (data.isBefore(hoje)) {
-            return List.of();
+        if (antecedencia.livre()) {
+            // Sem passado nem janela de reserva, o banco ainda recusa anos absurdos.
+            FaixaDeDatas.garantirNaFaixa(data);
+        } else {
+            LocalDate hoje = hoje(agora);
+            if (data.isBefore(hoje)) {
+                return List.of();
+            }
+            garantirDentroDaJanela(data, hoje);
         }
-        garantirDentroDaJanela(data, hoje);
 
-        Instant inicioMinimo = agora.plus(antecedencia);
+        Instant inicioMinimo = antecedencia.livre() ? Instant.MIN : agora.plus(antecedencia.minima());
         return cache.livres(profissionalId, servico.getDuracaoMinutos(), data, () -> livresDoDia(profissional, servico, data))
                 .stream()
                 .filter(horario -> !horario.inicio().isBefore(inicioMinimo))
