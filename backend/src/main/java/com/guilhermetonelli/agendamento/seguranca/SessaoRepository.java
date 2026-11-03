@@ -25,4 +25,9 @@ interface SessaoRepository extends JpaRepository<Sessao, UUID> {
     @Modifying
     @Query("UPDATE Sessao s SET s.revogadaEm = :agora WHERE s.usuario.id = :usuarioId AND s.revogadaEm IS NULL")
     void revogarDoUsuario(UUID usuarioId, Instant agora);
+
+    /** Apaga as sessões que venceram antes de {@code limite}. Devolve quantas apagou. */
+    @Modifying
+    @Query("DELETE FROM Sessao s WHERE s.expiraEm < :limite")
+    int apagarVencidasAntes(Instant limite);
 }

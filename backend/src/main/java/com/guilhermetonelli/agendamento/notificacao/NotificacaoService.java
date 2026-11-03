@@ -1,6 +1,7 @@
 package com.guilhermetonelli.agendamento.notificacao;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -13,7 +14,10 @@ import com.guilhermetonelli.agendamento.shared.exception.RecursoNaoEncontradoExc
 
 @Service
 @Transactional(readOnly = true)
-class NotificacaoService {
+public class NotificacaoService {
+
+    /** A tela mostra só as 20 mais recentes; as de mais de três meses não interessam a ninguém. */
+    private static final Duration GUARDA = Duration.ofDays(90);
 
     private final NotificacaoRepository repository;
     private final Clock clock;
@@ -47,5 +51,11 @@ class NotificacaoService {
     @Transactional
     void marcarTodasComoLidas(UUID profissionalId) {
         repository.marcarTodasComoLidas(profissionalId, clock.instant());
+    }
+
+    /** Devolve quantas apagou. */
+    @Transactional
+    public int apagarAntigas() {
+        return repository.apagarCriadasAntes(clock.instant().minus(GUARDA));
     }
 }

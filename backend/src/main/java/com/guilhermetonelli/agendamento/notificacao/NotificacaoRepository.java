@@ -24,4 +24,9 @@ interface NotificacaoRepository extends JpaRepository<Notificacao, UUID> {
     @Modifying
     @Query("update Notificacao n set n.lidaEm = :agora, n.atualizadoEm = :agora where n.profissionalId = :profissionalId and n.lidaEm is null")
     void marcarTodasComoLidas(UUID profissionalId, Instant agora);
+
+    /** Apaga as notificações criadas antes de {@code limite}. Devolve quantas apagou. */
+    @Modifying
+    @Query("delete from Notificacao n where n.criadoEm < :limite")
+    int apagarCriadasAntes(Instant limite);
 }

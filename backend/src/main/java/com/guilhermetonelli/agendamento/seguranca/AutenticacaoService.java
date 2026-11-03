@@ -5,6 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
@@ -157,6 +158,15 @@ public class AutenticacaoService {
                     garantirEmailLivre(email);
                     usuarios.save(Usuario.profissional(email, senhaHash, profissionalId));
                 });
+    }
+
+    /**
+     * Apaga as sessões que venceram há mais de um dia. Antes disso elas ainda servem para flagrar o reuso de um
+     * token já trocado. Devolve quantas apagou.
+     */
+    @Transactional
+    public int apagarSessoesVencidas() {
+        return sessoes.apagarVencidasAntes(Instant.now(clock).minus(Duration.ofDays(1)));
     }
 
     @Transactional
