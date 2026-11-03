@@ -4,7 +4,6 @@ import static com.guilhermetonelli.agendamento.agendamento.AgendamentoSpecificat
 import static com.guilhermetonelli.agendamento.agendamento.AgendamentoSpecifications.ativosDoProfissional;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -41,6 +40,7 @@ import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
 import com.guilhermetonelli.agendamento.servico.Servico;
 import com.guilhermetonelli.agendamento.servico.ServicoService;
 import com.guilhermetonelli.agendamento.shared.config.AgendamentoProperties;
+import com.guilhermetonelli.agendamento.shared.domain.Antecedencia;
 import com.guilhermetonelli.agendamento.shared.domain.FaixaDeDatas;
 import com.guilhermetonelli.agendamento.shared.exception.ConflitoException;
 import com.guilhermetonelli.agendamento.shared.exception.RecursoNaoEncontradoException;
@@ -101,8 +101,7 @@ public class AgendamentoService {
         }
         Profissional profissional = profissionalService.obterComTrava(request.profissionalId());
         Cliente cliente = clienteService.obter(request.clienteId());
-        return marcar(
-                profissional, request.servicoId(), cliente, request.inicio(), properties.antecedenciaMinimaReserva(), eu);
+        return marcar(profissional, request.servicoId(), cliente, request.inicio(), antecedenciaDeReserva(eu), eu);
     }
 
     /**
@@ -114,7 +113,7 @@ public class AgendamentoService {
         eu.garantirAgendaDe(request.profissionalId());
         Profissional profissional = profissionalService.obterComTrava(request.profissionalId());
         Cliente cliente = clienteService.cadastrarSemConta(request.nomeDoCliente(), request.telefone());
-        return marcar(profissional, request.servicoId(), cliente, request.inicio(), Duration.ZERO, eu);
+        return marcar(profissional, request.servicoId(), cliente, request.inicio(), Antecedencia.NENHUMA, eu);
     }
 
     public Page<AgendamentoResponse> listar(AgendamentoFiltro pedido, Pageable pageable, UsuarioLogado eu) {
@@ -132,7 +131,7 @@ public class AgendamentoService {
     @Transactional
     public AgendamentoResponse cancelar(UUID id, String motivo, UsuarioLogado eu) {
         Agendamento agendamento = obter(id, eu);
-        agendamento.cancelar(motivo, Instant.now(clock), antecedenciaExigida(eu));
+        agendamento.cancelar(motivo, Instant.now(clock), antecedenciaDeCancelamento(eu));
         repository.flush();
         agendaAlterada(profissionalId(agendamento));
         eventos.publishEvent(new AgendamentoCancelado(
@@ -151,14 +150,14 @@ public class AgendamentoService {
         Agendamento agendamento = obter(id, eu);
         profissionalService.obterComTrava(profissionalId(agendamento));
         Instant agora = Instant.now(clock);
-        Duration antecedencia = antecedenciaExigida(eu);
+        Antecedencia antecedencia = antecedenciaDeCancelamento(eu);
         agendamento.garantirQuePodeReagendar(agora, antecedencia);
 
         Periodo horario = disponibilidadeService.garantirHorarioNaAgenda(
                 agendamento.getProfissional(),
                 agendamento.getServico(),
                 request.inicio(),
-                properties.antecedenciaMinimaReserva());
+                antecedenciaDeReserva(eu));
         garantirSemConflito(
                 profissionalId(agendamento), clienteId(agendamento), horario, AgendamentoSpecifications.exceto(id));
 
@@ -203,7 +202,7 @@ public class AgendamentoService {
             UUID servicoId,
             Cliente cliente,
             Instant inicio,
-            Duration antecedencia,
+            Antecedencia antecedencia,
             UsuarioLogado eu) {
         Servico servico = servicoService.obter(servicoId);
         Periodo horario = disponibilidadeService.garantirHorarioNaAgenda(profissional, servico, inicio, antecedencia);
@@ -275,9 +274,25 @@ public class AgendamentoService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Agendamento", id));
     }
 
-    /** O prazo protege a agenda do profissional; ele mesmo e o administrador podem mudar até o início. */
-    private Duration antecedenciaExigida(UsuarioLogado eu) {
-        return eu.cliente() ? properties.antecedenciaMinimaCancelamento() : Duration.ZERO;
+    /**
+     * A antecedência protege a agenda do profissional, então só o cliente a cumpre. O profissional reserva sem
+     * antecedência, mas só o futuro; o administrador também reserva no passado e além da janela de reserva.
+     */
+    private Antecedencia antecedenciaDeReserva(UsuarioLogado eu) {
+        return switch (eu.papel()) {
+            case CLIENTE -> Antecedencia.de(properties.antecedenciaMinimaReserva());
+            case PROFISSIONAL -> Antecedencia.NENHUMA;
+            case ADMIN -> Antecedencia.LIVRE;
+        };
+    }
+
+    /** Vale para cancelar e reagendar: o profissional muda até o início; o administrador, até depois de começar. */
+    private Antecedencia antecedenciaDeCancelamento(UsuarioLogado eu) {
+        return switch (eu.papel()) {
+            case CLIENTE -> Antecedencia.de(properties.antecedenciaMinimaCancelamento());
+            case PROFISSIONAL -> Antecedencia.NENHUMA;
+            case ADMIN -> Antecedencia.LIVRE;
+        };
     }
 
     private Agendamento obterParaEncerrar(UUID id, UsuarioLogado eu) {

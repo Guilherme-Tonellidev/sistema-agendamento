@@ -18,6 +18,7 @@ import com.guilhermetonelli.agendamento.profissional.ProfissionalService;
 import com.guilhermetonelli.agendamento.servico.Servico;
 import com.guilhermetonelli.agendamento.servico.ServicoService;
 import com.guilhermetonelli.agendamento.shared.config.AgendamentoProperties;
+import com.guilhermetonelli.agendamento.shared.domain.Antecedencia;
 import com.guilhermetonelli.agendamento.shared.domain.Textos;
 import com.guilhermetonelli.agendamento.shared.exception.RegraDeNegocioException;
 
@@ -73,18 +74,17 @@ public class DisponibilidadeService {
     /**
      * Garante que o horário que começa em {@code inicio} apareceria nos horários livres, desconsiderando os
      * agendamentos (quem reserva confere os conflitos, inclusive os do cliente). Devolve o horário completo.
+     * Com antecedência livre, o horário também pode estar no passado ou além da janela de reserva.
      */
     public Periodo garantirHorarioNaAgenda(
-            Profissional profissional, Servico servico, Instant inicio, Duration antecedencia) {
+            Profissional profissional, Servico servico, Instant inicio, Antecedencia antecedencia) {
         garantirQuePodeAtender(profissional, servico);
         Instant agora = Instant.now(clock);
-        if (inicio.isBefore(agora.plus(antecedencia))) {
-            throw new RegraDeNegocioException(inicio.isAfter(agora)
-                    ? "Reservas precisam de pelo menos %s de antecedência.".formatted(Textos.duracao(antecedencia))
-                    : "O horário escolhido já passou.");
-        }
         LocalDate data = LocalDate.ofInstant(inicio, properties.fusoHorario());
-        garantirDentroDaJanela(data, hoje(agora));
+        if (!antecedencia.livre()) {
+            garantirNoPrazo(inicio, agora, antecedencia.minima());
+            garantirDentroDaJanela(data, hoje(agora));
+        }
         if (!calculadora.alinhado(inicio)) {
             throw new RegraDeNegocioException("Os horários começam a cada %d minutos."
                     .formatted(properties.intervaloEntreHorarios().toMinutes()));
@@ -154,6 +154,14 @@ public class DisponibilidadeService {
         if (!profissional.atende(servico)) {
             throw new RegraDeNegocioException(
                     "O profissional " + profissional.getNome() + " não atende o serviço " + servico.getNome() + ".");
+        }
+    }
+
+    private static void garantirNoPrazo(Instant inicio, Instant agora, Duration antecedencia) {
+        if (inicio.isBefore(agora.plus(antecedencia))) {
+            throw new RegraDeNegocioException(inicio.isAfter(agora)
+                    ? "Reservas precisam de pelo menos %s de antecedência.".formatted(Textos.duracao(antecedencia))
+                    : "O horário escolhido já passou.");
         }
     }
 
