@@ -1,10 +1,14 @@
 package com.guilhermetonelli.agendamento;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.testcontainers.containers.GenericContainer;
@@ -20,12 +24,13 @@ public class RedisDeTeste {
         this.servidor = servidor;
     }
 
-    /** Apaga todas as chaves. */
+    /** Apaga todas as chaves. Se o Redis estourar o timeout de 300 ms da aplicação, repete por até 5 s. */
     public void limpar() {
-        redis.execute((RedisCallback<Void>) conexao -> {
-            conexao.serverCommands().flushAll();
-            return null;
-        });
+        await().atMost(5, SECONDS).ignoreException(QueryTimeoutException.class).untilAsserted(() ->
+                redis.execute((RedisCallback<Void>) conexao -> {
+                    conexao.serverCommands().flushAll();
+                    return null;
+                }));
     }
 
     /** Chaves que casam com o padrão ({@code *} vale para qualquer trecho), em ordem alfabética. */

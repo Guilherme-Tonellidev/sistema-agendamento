@@ -1,7 +1,13 @@
 package com.guilhermetonelli.agendamento;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.function.IntConsumer;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,6 +95,35 @@ public abstract class IntegracaoTest {
         limiteDeLogin.reiniciar();
         eventos.limpar();
         api = apiComo(new UsuarioLogado(UUID.randomUUID(), Papel.ADMIN, null, null));
+    }
+
+    protected static Duration medir(Runnable acao) {
+        long inicio = System.nanoTime();
+        acao.run();
+        return Duration.ofNanos(System.nanoTime() - inicio);
+    }
+
+    /** Roda {@code acao} em {@code tarefas} threads largando juntas e devolve quanto cada uma demorou. */
+    protected static List<Duration> demorasEmParalelo(int tarefas, IntConsumer acao) {
+        var largada = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(tarefas)) {
+            List<Future<Duration>> execucoes = IntStream.range(0, tarefas)
+                    .<Future<Duration>>mapToObj(i -> executor.submit(() -> {
+                        largada.await();
+                        return medir(() -> acao.accept(i));
+                    }))
+                    .toList();
+            largada.countDown();
+            return execucoes.stream().map(IntegracaoTest::esperar).toList();
+        }
+    }
+
+    private static Duration esperar(Future<Duration> execucao) {
+        try {
+            return execucao.get(10, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /** Cada requisição leva um token novo, emitido no horário atual do relógio de teste. */

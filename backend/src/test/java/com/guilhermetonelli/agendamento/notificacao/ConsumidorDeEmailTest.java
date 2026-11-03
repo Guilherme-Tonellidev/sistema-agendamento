@@ -116,6 +116,7 @@ class ConsumidorDeEmailTest {
     private static AgendamentoProperties propriedades() {
         return new AgendamentoProperties(ZoneId.of("America/Sao_Paulo"), Duration.ofMinutes(15), Period.ofDays(90), Duration.ZERO, Duration.ZERO,
                 new AgendamentoProperties.Notificacoes("Barbearia <b@exemplo.com>"),
-                new AgendamentoProperties.Lembrete(Duration.ofHours(24), Duration.ofHours(1)));
+                new AgendamentoProperties.Lembrete(Duration.ofHours(24), Duration.ofHours(1)),
+                new AgendamentoProperties.CacheHorarios(Duration.ofMinutes(2)));
     }
 }

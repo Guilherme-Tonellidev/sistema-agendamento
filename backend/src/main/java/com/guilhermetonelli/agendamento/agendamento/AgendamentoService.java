@@ -32,6 +32,7 @@ import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoCriado;
 import com.guilhermetonelli.agendamento.agendamento.evento.AgendamentoReagendado;
 import com.guilhermetonelli.agendamento.cliente.Cliente;
 import com.guilhermetonelli.agendamento.cliente.ClienteService;
+import com.guilhermetonelli.agendamento.disponibilidade.AgendaAlterada;
 import com.guilhermetonelli.agendamento.disponibilidade.DisponibilidadeService;
 import com.guilhermetonelli.agendamento.disponibilidade.Periodo;
 import com.guilhermetonelli.agendamento.profissional.Profissional;
@@ -133,6 +134,7 @@ public class AgendamentoService {
         Agendamento agendamento = obter(id, eu);
         agendamento.cancelar(motivo, Instant.now(clock), antecedenciaExigida(eu));
         repository.flush();
+        agendaAlterada(profissionalId(agendamento));
         eventos.publishEvent(new AgendamentoCancelado(
                 id,
                 profissionalId(agendamento),
@@ -164,6 +166,7 @@ public class AgendamentoService {
         agendamento.reagendar(horario, agora, antecedencia);
         agendamento.programarLembrete(lembrarEm(agendamento.getCliente(), horario.inicio(), agora));
         salvar(agendamento);
+        agendaAlterada(profissionalId(agendamento));
         eventos.publishEvent(new AgendamentoReagendado(
                 id,
                 profissionalId(agendamento),
@@ -179,6 +182,7 @@ public class AgendamentoService {
     public AgendamentoResponse concluir(UUID id, UsuarioLogado eu) {
         Agendamento agendamento = obterParaEncerrar(id, eu);
         agendamento.concluir(Instant.now(clock));
+        agendaAlterada(profissionalId(agendamento));
         return mapper.paraResponse(agendamento);
     }
 
@@ -186,6 +190,7 @@ public class AgendamentoService {
     public AgendamentoResponse registrarFalta(UUID id, UsuarioLogado eu) {
         Agendamento agendamento = obterParaEncerrar(id, eu);
         agendamento.registrarFalta(Instant.now(clock));
+        agendaAlterada(profissionalId(agendamento));
         return mapper.paraResponse(agendamento);
     }
 
@@ -207,10 +212,16 @@ public class AgendamentoService {
         Agendamento novo = new Agendamento(profissional, servico, cliente, horario);
         novo.programarLembrete(lembrarEm(cliente, horario.inicio(), Instant.now(clock)));
         Agendamento agendamento = salvar(novo);
+        agendaAlterada(profissional.getId());
         eventos.publishEvent(new AgendamentoCriado(
                 agendamento.getId(), profissional.getId(), cliente.getId(), horario.inicio(), horario.fim(),
                 agendamento.aviso(eu.papel())));
         return mapper.paraResponse(agendamento);
+    }
+
+    /** Publicado dentro da transação: o cache de horários do profissional só é descartado se ela for confirmada. */
+    private void agendaAlterada(UUID profissionalId) {
+        eventos.publishEvent(new AgendaAlterada(profissionalId));
     }
 
     /** Sem e-mail não há para onde mandar o lembrete. */

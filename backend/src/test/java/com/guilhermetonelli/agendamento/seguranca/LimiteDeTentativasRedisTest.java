@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -17,6 +18,7 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 
 import com.guilhermetonelli.agendamento.IntegracaoTest;
 import com.guilhermetonelli.agendamento.shared.exception.TentativasDemaisException;
@@ -27,6 +29,9 @@ class LimiteDeTentativasRedisTest extends IntegracaoTest {
 
     @Autowired
     private LimiteDeTentativas limite;
+
+    @Autowired
+    private LettuceConnectionFactory conexoes;
 
     @Test
     void vinteEmParaleloDeixamPassarExatamenteCinco() throws Exception {
@@ -91,6 +96,19 @@ class LimiteDeTentativasRedisTest extends IntegracaoTest {
     }
 
     @Test
+    void semConexaoERedisTravadoSoAPrimeiraChamadaPagaOTempo() {
+        conexoes.resetConnection();
+        List<Duration> demoras = new ArrayList<>();
+
+        redis.comRedisPausado(() -> {
+            demoras.add(medir(() -> limite.registrarTentativa(chave)));
+            demoras.addAll(demorasEmParalelo(8, i -> limite.registrarTentativa(LimiteDeTentativas.chave("u" + i + "@gmail.com", "127.0.0.1"))));
+        });
+
+        assertThat(demoras).hasSize(9).allSatisfy(demora -> assertThat(demora).isLessThan(Duration.ofSeconds(1)));
+    }
+
+    @Test
     void comORedisPausadoOLoginSegueEOLimiteVaiParaAMemoria() {
         List<Duration> demoras = new ArrayList<>();
         redis.comRedisPausado(() -> {
@@ -103,19 +121,15 @@ class LimiteDeTentativasRedisTest extends IntegracaoTest {
 
         assertThat(demoras).hasSize(6).allSatisfy(demora -> assertThat(demora).isLessThan(Duration.ofSeconds(1)));
 
-        // Com o Redis de volta, o limite volta a usá-lo. Os comandos que ficaram pendentes na pausa também chegam,
-        // por isso cada tentativa recomeça de um Redis limpo.
+        // Com o Redis de volta, o limite volta a usá-lo na primeira tentativa depois da pausa de 5 s (o relógio é de
+        // teste, então ele avança aqui). Os comandos que ficaram pendentes também chegam, por isso cada tentativa
+        // recomeça de um Redis limpo.
         String outra = LimiteDeTentativas.chave("ana@gmail.com", "127.0.0.1");
         await().atMost(15, SECONDS).ignoreExceptions().untilAsserted(() -> {
+            relogio.ajustar(Instant.now(relogio).plusSeconds(6));
             redis.limpar();
             limite.registrarTentativa(outra);
             assertThat(redis.chaves("login:*")).hasSize(1);
         });
-    }
-
-    private static Duration medir(Runnable acao) {
-        long inicio = System.nanoTime();
-        acao.run();
-        return Duration.ofNanos(System.nanoTime() - inicio);
     }
 }

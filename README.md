@@ -26,6 +26,7 @@ dados garante que nunca existam dois agendamentos sobrepostos para o mesmo profi
 | Back-end | Java 21, Spring Boot 4, Spring Security (JWT), Spring Data JPA, MapStruct, Flyway, OpenAPI (Swagger UI) |
 | Banco de dados | PostgreSQL 18 |
 | Mensageria e agendador | RabbitMQ, Quartz (armazenamento JDBC), Spring Mail (Mailpit em desenvolvimento) |
+| Cache e limite de login | Redis (Lettuce) |
 | Front-end | Angular 22 (signals, sem zone.js), Vitest |
 | Testes | JUnit, AssertJ, Testcontainers (PostgreSQL, RabbitMQ, Redis e Mailpit reais) |
 | Entrega | Docker, GitHub Actions |
@@ -127,6 +128,7 @@ flowchart LR
 - O preço fica congelado na reserva. Serviços e profissionais são inativados, não apagados.
 - Erros no padrão Problem Details (RFC 9457), com `404`, `409` e `422`.
 - Quartz no PostgreSQL, em cluster: com duas instâncias da API, só uma varre por vez.
+- Os horários livres de um dia ficam 2 minutos no Redis, numa chave com uma versão por profissional que toda mudança na agenda troca. A reserva não lê o cache: confere a agenda de novo no banco. Sem o Redis, a consulta vai direto ao banco.
 - Testes com PostgreSQL, RabbitMQ, Redis e Mailpit reais (Testcontainers), sem H2.
 
 Endpoints, regras de reserva, avisos, configuração e deploy: [`docs/referencia.md`](docs/referencia.md).
@@ -143,7 +145,7 @@ Endpoints, regras de reserva, avisos, configuração e deploy: [`docs/referencia
 - [x] **6. Telas do front-end:** serviços, minhas reservas e agenda do barbeiro com encaixe e bloqueio
 - [x] **7. RabbitMQ:** eventos de agendamento, e-mails ao cliente e sino de notificações do barbeiro
 - [x] **8. Quartz:** lembretes por e-mail 24h antes do horário (1h antes para quem reserva em cima da hora)
-- [ ] **9. Redis:** cache de horários e limite de tentativas de login
+- [x] **9. Redis:** cache de horários e limite de tentativas de login
 - [ ] **10. Painel do administrador:** visão da semana com FullCalendar e histórico com Hibernate Envers
 - [ ] **11. Deploy** com link público
 

@@ -43,7 +43,10 @@ public class TestcontainersConfiguration {
     @ServiceConnection(name = "redis")
     @SuppressWarnings("resource") // o Spring sobe e para o contêiner junto com o contexto
     GenericContainer<?> redisContainer() {
-        return new GenericContainer<>(REDIS).withExposedPorts(PORTA_DO_REDIS);
+        // Sem snapshots, como na produção: com eles, cada FLUSHALL entre testes grava o banco em disco e pode passar do timeout de 300 ms.
+        return new GenericContainer<>(REDIS)
+                .withExposedPorts(PORTA_DO_REDIS)
+                .withCommand("redis-server", "--save", "", "--appendonly", "no");
     }
 
     @Bean

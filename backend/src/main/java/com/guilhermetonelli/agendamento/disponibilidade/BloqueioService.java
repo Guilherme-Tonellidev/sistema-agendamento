@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ public class BloqueioService {
     private final DisponibilidadeMapper mapper;
     private final ProfissionalService profissionalService;
     private final AgendamentosAtivos agendamentosAtivos;
+    private final ApplicationEventPublisher eventos;
     private final AgendamentoProperties properties;
 
     BloqueioService(
@@ -32,11 +34,13 @@ public class BloqueioService {
             DisponibilidadeMapper mapper,
             ProfissionalService profissionalService,
             AgendamentosAtivos agendamentosAtivos,
+            ApplicationEventPublisher eventos,
             AgendamentoProperties properties) {
         this.repository = repository;
         this.mapper = mapper;
         this.profissionalService = profissionalService;
         this.agendamentosAtivos = agendamentosAtivos;
+        this.eventos = eventos;
         this.properties = properties;
     }
 
@@ -57,7 +61,9 @@ public class BloqueioService {
                     Map.of("agendamentos", afetados.stream().map(a -> Map.of(
                             "id", a.id(), "inicio", a.horario().inicio(), "fim", a.horario().fim())).toList()));
         }
-        return mapper.paraResponse(repository.save(bloqueio));
+        Bloqueio salvo = repository.save(bloqueio);
+        eventos.publishEvent(new AgendaAlterada(profissionalId));
+        return mapper.paraResponse(salvo);
     }
 
     public List<BloqueioResponse> listar(UUID profissionalId, BloqueioFiltro filtro) {
@@ -75,6 +81,7 @@ public class BloqueioService {
         Bloqueio bloqueio = repository.findByIdAndProfissionalId(bloqueioId, profissionalId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Bloqueio", bloqueioId));
         repository.delete(bloqueio);
+        eventos.publishEvent(new AgendaAlterada(profissionalId));
     }
 
     List<Periodo> bloqueados(UUID profissionalId, Periodo periodo) {

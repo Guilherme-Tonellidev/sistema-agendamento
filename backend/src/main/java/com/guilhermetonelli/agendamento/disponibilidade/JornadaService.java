@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,14 +27,17 @@ public class JornadaService {
     private final IntervaloDeJornadaRepository repository;
     private final DisponibilidadeMapper mapper;
     private final ProfissionalService profissionalService;
+    private final ApplicationEventPublisher eventos;
 
     JornadaService(
             IntervaloDeJornadaRepository repository,
             DisponibilidadeMapper mapper,
-            ProfissionalService profissionalService) {
+            ProfissionalService profissionalService,
+            ApplicationEventPublisher eventos) {
         this.repository = repository;
         this.mapper = mapper;
         this.profissionalService = profissionalService;
+        this.eventos = eventos;
     }
 
     public JornadaDto buscar(UUID profissionalId) {
@@ -51,7 +55,9 @@ public class JornadaService {
         garantirSemSobreposicao(intervalos);
 
         repository.removerDoProfissional(profissionalId);
-        return paraDto(repository.saveAll(intervalos));
+        JornadaDto definida = paraDto(repository.saveAll(intervalos));
+        eventos.publishEvent(new AgendaAlterada(profissionalId));
+        return definida;
     }
 
     List<IntervaloDeJornada> doProfissional(UUID profissionalId) {

@@ -42,6 +42,25 @@ qualquer outro campo recebe `400`.
 6. Quem chega sem reserva é encaixado pelo barbeiro só com o nome (e, se quiser, o telefone): sem
    antecedência mínima, mas com as mesmas regras de jornada, bloqueio e conflito.
 
+## Cache de horários
+
+A consulta de horários livres (`GET .../horarios-livres` e `.../horarios-livres/encaixe`) guarda no Redis os horários de um
+profissional num dia, por 2 minutos. Serviços da mesma duração dividem a entrada. O prazo de antecedência fica de fora da
+entrada e é aplicado a cada leitura, então "daqui a pouco" e o encaixe sempre valem.
+
+Reservar, cancelar, reagendar, concluir, marcar falta, bloquear, remover um bloqueio e trocar a jornada mudam a versão do
+profissional depois do commit, e as entradas antigas deixam de ser lidas. A versão é um token aleatório que vale 1 hora;
+se o Redis a perder, a API cria uma nova, então uma entrada antiga nunca volta.
+
+A reserva não lê o cache: ela confere jornada, bloqueios e conflitos no banco. Sem o Redis, a consulta vai direto ao
+banco e o log registra um aviso por minuto. Depois de uma falha, a API só tenta o Redis de novo a cada 5 segundos, uma
+chamada por vez, para um Redis inalcançável não fazer cada requisição esperar o timeout de 300 ms; só as que chegam
+juntas na primeira falha esperam, uma única vez.
+
+O que o cache pode errar: se o Redis estiver fora do ar, ou tiver acabado de falhar, justo quando a agenda muda, a troca
+da versão se perde e a tela mostra o horário velho por até 2 minutos. Quem tentar reservá-lo recebe a recusa do banco
+(`409` ou `422`). Se recriar ou restaurar o banco com a API no ar, esvazie o Redis junto (`FLUSHDB`).
+
 ## Avisos de reserva
 
 Quem agiu já sabe: o aviso vai para a outra parte, e a reserva é a única exceção, porque o cliente
@@ -83,6 +102,7 @@ ou mais (o mínimo para reservar é 1h30). O lembrete aparece no Mailpit 2 h ant
 | `agendamento.janela-de-reserva` | `P90D` | Até quanto tempo à frente é possível reservar |
 | `agendamento.antecedencia-minima-reserva` | `PT1H30M` | Prazo mínimo entre a reserva e o início do horário |
 | `agendamento.antecedencia-minima-cancelamento` | `PT2H` | Prazo mínimo para o cliente cancelar ou reagendar |
+| `agendamento.cache-horarios.ttl` | `PT2M` | Por quanto tempo a consulta de horários livres de um dia fica no Redis (positivo) |
 | `agendamento.lembrete.antecedencia` | `PT24H` | Quanto tempo antes do início o lembrete sai |
 | `agendamento.lembrete.antecedencia-reserva-tardia` | `PT1H` | Quanto tempo antes do início sai o lembrete de quem reservou com menos de `antecedencia` (positiva e menor que ela) |
 | `agendamento.dados-de-exemplo` | `false` (`true` no perfil `local`) | Cadastra os [dados de exemplo](../README.md#dados-de-exemplo) num banco sem serviços |
@@ -140,7 +160,7 @@ conhecidas. Os avisos
 precisam também de um RabbitMQ (`SPRING_RABBITMQ_HOST`, `SPRING_RABBITMQ_USERNAME` e
 `SPRING_RABBITMQ_PASSWORD`), de um servidor SMTP (`MAIL_*`, abaixo) e de um Redis (`SPRING_DATA_REDIS_HOST` e, se ele
 tiver senha, `SPRING_DATA_REDIS_PASSWORD`). Sem o Redis a API segue de pé: o limite de login passa a contar só na memória
-de cada instância.
+de cada instância, e a consulta de horários vai direto ao banco.
 
 ## Docker Compose de desenvolvimento
 

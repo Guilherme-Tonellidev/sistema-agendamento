@@ -44,9 +44,14 @@ public class LimiteDeTentativas {
 
     /** Conta mais uma tentativa ou, se o limite da janela já foi alcançado, lança {@link TentativasDemaisException}. */
     void registrarTentativa(String chave) {
+        if (!falhas.podeTentar()) {
+            memoria.registrarTentativa(chave);
+            return;
+        }
         Duration falta;
         try {
             falta = redis.registrar(chave);
+            falhas.respondeu();
         } catch (RuntimeException e) {
             falhas.registrar(OPERACAO, e);
             memoria.registrarTentativa(chave);
@@ -60,17 +65,22 @@ public class LimiteDeTentativas {
     /** Login bem-sucedido: recomeça a contagem desta chave. */
     void limpar(String chave) {
         memoria.limpar(chave);
+        if (!falhas.podeTentar()) {
+            return;
+        }
         try {
             redis.limpar(chave);
+            falhas.respondeu();
         } catch (RuntimeException e) {
             falhas.registrar(OPERACAO, e);
         }
     }
 
-    /** Esquece tudo. Usado pelos testes, que compartilham a mesma instância da aplicação. */
+    /** Esquece tudo, inclusive as falhas do Redis. Usado pelos testes, que compartilham a mesma instância da aplicação. */
     public void reiniciar() {
         memoria.reiniciar();
         redis.reiniciar();
+        falhas.respondeu();
     }
 
     static TentativasDemaisException bloqueio(Duration falta) {
