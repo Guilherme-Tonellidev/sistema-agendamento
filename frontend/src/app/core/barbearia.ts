@@ -28,6 +28,9 @@ const POR_DIA_DA_SEMANA: readonly Expediente[] = [
 /** Até quanto tempo antes do horário o cliente cancela ou remarca sozinho (regra do back-end). */
 export const PRAZO_PARA_MUDAR_EM_HORAS = 2;
 
+/** Passo entre os horários da agenda: o `agendamento.intervalo-entre-horarios` padrão do back-end. */
+export const INTERVALO_ENTRE_HORARIOS_EM_MINUTOS = 15;
+
 /** "9h às 20h", ou "fechado". */
 export function horarioDe({ abre, fecha }: Expediente): string {
   return abre === null ? 'fechado' : `${abre}h às ${fecha}h`;
@@ -54,4 +57,11 @@ export function limiteParaMudar(inicio: string): Date {
 export function atendeEm(data: string, agora: Date): boolean {
   const { fecha } = expedienteDo(data);
   return fecha !== null && (data !== dataNoFuso(agora) || minutosNoFuso(agora) < fecha * 60);
+}
+
+/** Da abertura mais cedo ao fechamento mais tarde da semana: as horas que a grade semanal mostra. */
+export function faixaDeHoras(): { abre: number; fecha: number } {
+  const horas = (campo: 'abre' | 'fecha') =>
+    FUNCIONAMENTO.map((expediente) => expediente[campo]).filter((hora) => hora !== null);
+  return { abre: Math.min(...horas('abre')), fecha: Math.max(...horas('fecha')) };
 }
