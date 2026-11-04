@@ -1,14 +1,10 @@
 package com.guilhermetonelli.agendamento.seguranca;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.HexFormat;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -115,7 +111,7 @@ public class AutenticacaoService {
     @Transactional(noRollbackFor = NaoAutenticadoException.class)
     SessaoAberta renovar(String refreshToken) {
         Instant agora = Instant.now(clock);
-        Sessao sessao = sessoes.findByTokenHash(hash(refreshToken))
+        Sessao sessao = sessoes.findByTokenHash(Textos.sha256(refreshToken))
                 .orElseThrow(() -> new NaoAutenticadoException(SESSAO_INVALIDA));
 
         if (sessao.reutilizada()) {
@@ -132,7 +128,7 @@ public class AutenticacaoService {
     /** Encerra a sessão do dispositivo. Token desconhecido não é erro: o resultado é o mesmo. */
     @Transactional
     void sair(String refreshToken) {
-        sessoes.findByTokenHash(hash(refreshToken))
+        sessoes.findByTokenHash(Textos.sha256(refreshToken))
                 .ifPresent(sessao -> sessoes.revogarFamilia(sessao.getFamilia(), Instant.now(clock)));
     }
 
@@ -198,16 +194,7 @@ public class AutenticacaoService {
         String refreshToken = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
         Instant agora = Instant.now(clock);
-        sessoes.save(new Sessao(usuario, familia, hash(refreshToken), agora, agora.plus(properties.validadeDaSessao())));
+        sessoes.save(new Sessao(usuario, familia, Textos.sha256(refreshToken), agora, agora.plus(properties.validadeDaSessao())));
         return new SessaoAberta(emissor.emitir(usuario.comoLogado()), refreshToken);
-    }
-
-    private static String hash(String token) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 é obrigatório em toda JVM", e);
-        }
     }
 }
