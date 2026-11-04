@@ -33,6 +33,8 @@ export class PainelAtendimento {
 
   readonly agendamento = input.required<Agendamento>();
   readonly agora = input.required<Date>();
+  /** O administrador cancela mesmo depois do início; a /agenda do barbeiro não. */
+  readonly cancelaDepoisDoInicio = input(false);
   /** Concluído, falta registrada ou cancelado: a agenda recarrega. */
   readonly mudou = output<void>();
 

@@ -9,6 +9,7 @@ import { dataNoFuso } from '../../core/datas';
 import { Cabecalho } from '../../compartilhado/cabecalho/cabecalho';
 import { Calendario } from './calendario';
 import { FormularioMarcar } from './formulario-marcar';
+import { PainelDetalhes } from './painel-detalhes';
 import { corDoBarbeiro, paraEvento, semanaDe, todasAsPaginas } from './eventos';
 
 type Painel =
@@ -18,7 +19,7 @@ type Painel =
 
 @Component({
   selector: 'app-semana',
-  imports: [Cabecalho, Calendario, FormularioMarcar],
+  imports: [Cabecalho, Calendario, FormularioMarcar, PainelDetalhes],
   templateUrl: './semana.html',
   styleUrl: './semana.css',
 })
@@ -87,6 +88,11 @@ export class Semana {
   });
 
   readonly painel = signal<Painel>(null);
+  /** Em lista para o @for recriar o painel a cada bloco escolhido: nada de um vaza para o outro. */
+  protected readonly detalhes = computed(() => {
+    const aberto = this.painel();
+    return aberto?.tipo === 'detalhes' ? [aberto.agendamento] : [];
+  });
 
   private readonly buscas = [this.equipe, this.lista];
   protected readonly erro = computed(() => {
@@ -109,8 +115,8 @@ export class Semana {
     });
   }
 
-  /** O bloco novo aparece na grade com a semana buscada de novo. */
-  protected marcou(): void {
+  /** Marcou, remarcou ou cancelou: fecha o painel, que ficaria velho, e busca a semana de novo. */
+  protected mudou(): void {
     this.painel.set(null);
     this.lista.reload();
   }

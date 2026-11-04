@@ -42,7 +42,7 @@
     </div>
   }
 
-  <div class="area" [class.com-painel]="painel()?.tipo === 'marcar'">
+  <div class="area" [class.com-painel]="painel() !== null">
     <app-calendario
       [class.carregando]="carregando()"
       [attr.aria-busy]="carregando()"
@@ -54,15 +54,22 @@
     />
 
     @if (painel(); as aberto) {
-      @if (aberto.tipo === 'marcar') {
-        <aside class="lado">
+      <aside class="lado">
+        @if (aberto.tipo === 'marcar') {
           <app-formulario-marcar
             [inicio]="aberto.inicio"
-            (marcado)="marcou()"
+            (marcado)="mudou()"
             (voltar)="painel.set(null)"
           />
-        </aside>
-      }
+        }
+        @for (agendamento of detalhes(); track agendamento.id) {
+          <app-painel-detalhes
+            [agendamento]="agendamento"
+            (mudou)="mudou()"
+            (fechar)="painel.set(null)"
+          />
+        }
+      </aside>
     }
   </div>
 </main>

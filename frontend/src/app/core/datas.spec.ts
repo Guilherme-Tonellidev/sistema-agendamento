@@ -1,4 +1,12 @@
-import { dataNoFuso, diaLocal, horaNoFuso, instanteNoFuso, rotuloDoDia, somarDias } from './datas';
+import {
+  dataNoFuso,
+  diaEHora,
+  diaLocal,
+  horaNoFuso,
+  instanteNoFuso,
+  rotuloDoDia,
+  somarDias,
+} from './datas';
 
 describe('datas no fuso da barbearia', () => {
   it('um instante perto da meia-noite cai no dia e na hora de São Paulo', () => {
@@ -11,6 +19,10 @@ describe('datas no fuso da barbearia', () => {
   it('a hora do relógio da barbearia vira o instante certo, mesmo trocando o dia em UTC', () => {
     expect(instanteNoFuso('2026-10-21', '15:00').toISOString()).toBe('2026-10-21T18:00:00.000Z');
     expect(instanteNoFuso('2026-10-21', '23:30').toISOString()).toBe('2026-10-22T02:30:00.000Z');
+  });
+
+  it('dia e hora curtos, no fuso da barbearia', () => {
+    expect(diaEHora('2026-10-22T02:30:00Z')).toBe('21/10 23:30');
   });
 
   it('soma dias atravessando o fim do mês', () => {

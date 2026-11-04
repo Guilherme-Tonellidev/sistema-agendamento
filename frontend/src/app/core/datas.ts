@@ -41,6 +41,12 @@ export function horaNoFuso(instante: Date | string): string {
   return formatoHora.format(new Date(instante));
 }
 
+/** Ex.: "21/10 08:00", no fuso da barbearia. */
+export function diaEHora(instante: Date | string): string {
+  const dia = dataNoFuso(instante);
+  return `${dia.slice(8, 10)}/${dia.slice(5, 7)} ${horaNoFuso(instante)}`;
+}
+
 /** Minutos desde a meia-noite, no fuso da barbearia. */
 export function minutosNoFuso(instante: Date | string): number {
   const [horas, minutos] = horaNoFuso(instante).split(':').map(Number);

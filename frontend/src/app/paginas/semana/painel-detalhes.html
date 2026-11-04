@@ -1,0 +1,83 @@
+@let atendimento = agendamento();
+<div class="detalhes">
+  <div class="cabeca">
+    <p>{{ resumo().dia }} · {{ resumo().barbeiro }}</p>
+    <button type="button" class="link" (click)="fechar.emit()">Fechar</button>
+  </div>
+
+  <app-painel-atendimento
+    [agendamento]="atendimento"
+    [agora]="agora()"
+    [cancelaDepoisDoInicio]="true"
+    (mudou)="mudou.emit()"
+  />
+
+  <section class="extra" aria-label="Remarcar e histórico">
+    @if (atendimento.status === 'CONFIRMADO') {
+      @if (remarcando()) {
+        <div class="campo">
+          <label for="dia-remarcar">Novo dia</label>
+          <input
+            #campoDia
+            id="dia-remarcar"
+            type="date"
+            [value]="dia()"
+            (change)="escolherDia(campoDia.value)"
+          />
+        </div>
+
+        <div class="campo">
+          <label for="horario-remarcar">Horário livre</label>
+          @if (horarios().length) {
+            <select
+              #campoHorario
+              id="horario-remarcar"
+              [attr.aria-busy]="buscando()"
+              (change)="escolhido.set(campoHorario.value)"
+            >
+              @for (opcao of horarios(); track opcao.inicio) {
+                <option [value]="opcao.inicio" [selected]="opcao.inicio === escolhido()">
+                  {{ opcao.hora }}
+                </option>
+              }
+            </select>
+          } @else if (falhaNosHorarios(); as mensagem) {
+            <p class="erro" role="alert">{{ mensagem }}</p>
+          } @else {
+            <p class="nota">
+              {{ buscando() ? 'Buscando horários…' : 'Nenhum horário livre nesse dia.' }}
+            </p>
+          }
+        </div>
+
+        @if (erro(); as mensagem) {
+          <p class="erro" role="alert">{{ mensagem }}</p>
+        }
+
+        <div class="acoes lado-a-lado">
+          <button type="button" class="botao secundario" (click)="remarcando.set(false)">
+            Voltar
+          </button>
+          <button
+            type="button"
+            class="botao primario"
+            [disabled]="enviando() || buscando() || !escolhido()"
+            (click)="remarcar()"
+          >
+            {{ enviando() ? 'Remarcando…' : 'Confirmar' }}
+          </button>
+        </div>
+      } @else {
+        <button
+          type="button"
+          class="botao secundario"
+          (click)="erro.set(null); remarcando.set(true)"
+        >
+          Remarcar
+        </button>
+      }
+    }
+
+    <app-linha-do-tempo [agendamentoId]="atendimento.id" />
+  </section>
+</div>

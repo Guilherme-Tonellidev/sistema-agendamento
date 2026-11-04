@@ -1,0 +1,19 @@
+<h3 id="titulo-historico">Histórico</h3>
+@if (falha(); as mensagem) {
+  <p class="erro" role="alert">{{ mensagem }}</p>
+} @else if (eventos().length) {
+  <ol aria-labelledby="titulo-historico">
+    @for (evento of eventos(); track $index) {
+      <li>
+        @if (evento.quando) {
+          <time [attr.datetime]="evento.quando">{{ evento.hora }}</time>
+        }
+        {{ evento.frase }}
+      </li>
+    }
+  </ol>
+} @else if (carregou()) {
+  <p class="nota">Sem registros.</p>
+} @else {
+  <p class="nota">Carregando o histórico…</p>
+}
