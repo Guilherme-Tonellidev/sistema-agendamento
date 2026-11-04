@@ -6,19 +6,26 @@ import { Sessao } from '../../core/autenticacao/sessao';
 import { Marca } from '../marca/marca';
 import { Sino } from '../sino/sino';
 
-interface Link {
+export interface Link {
   readonly rota: string;
   readonly rotulo: string;
 }
 
 const SERVICOS: Link = { rota: '/servicos', rotulo: 'Serviços' };
 
-/** O segundo link do topo muda com quem está logado. */
-const DO_PAPEL: Record<Papel, Link> = {
-  CLIENTE: { rota: '/minhas-reservas', rotulo: 'Minhas reservas' },
-  PROFISSIONAL: { rota: '/agenda', rotulo: 'Minha agenda' },
-  ADMIN: { rota: '/agenda', rotulo: 'Agenda' },
+/** Depois dos serviços, os links do topo mudam com quem está logado. */
+const DO_PAPEL: Record<Papel, readonly Link[]> = {
+  CLIENTE: [{ rota: '/minhas-reservas', rotulo: 'Minhas reservas' }],
+  PROFISSIONAL: [{ rota: '/agenda', rotulo: 'Minha agenda' }],
+  ADMIN: [
+    { rota: '/agenda', rotulo: 'Agenda' },
+    { rota: '/semana', rotulo: 'Semana' },
+  ],
 };
+
+export function linksDo(papel: Papel | undefined): readonly Link[] {
+  return papel ? [SERVICOS, ...DO_PAPEL[papel]] : [SERVICOS];
+}
 
 @Component({
   selector: 'app-cabecalho',
@@ -29,10 +36,7 @@ const DO_PAPEL: Record<Papel, Link> = {
 export class Cabecalho {
   protected readonly sessao = inject(Sessao);
 
-  protected readonly links = computed(() => {
-    const papel = this.sessao.usuario()?.papel;
-    return papel ? [SERVICOS, DO_PAPEL[papel]] : [SERVICOS];
-  });
+  protected readonly links = computed(() => linksDo(this.sessao.usuario()?.papel));
   protected readonly ehBarbeiro = computed(() => this.sessao.usuario()?.papel === 'PROFISSIONAL');
   protected readonly inicial = computed(
     () => this.sessao.usuario()?.email.charAt(0).toUpperCase() ?? '',

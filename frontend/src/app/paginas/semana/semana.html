@@ -1,0 +1,54 @@
+<app-cabecalho />
+
+<main class="pagina">
+  @if (erro(); as mensagem) {
+    <p class="aviso" role="alert">
+      {{ mensagem }}
+      <button type="button" class="link" (click)="tentarDeNovo()">Tentar de novo</button>
+    </p>
+  }
+
+  <div class="topo">
+    <h1>Semana</h1>
+    <label class="cancelados">
+      <input
+        #caixa
+        type="checkbox"
+        [checked]="mostrarCancelados()"
+        (change)="mostrarCancelados.set(caixa.checked)"
+      />
+      Mostrar cancelados
+    </label>
+  </div>
+
+  @if (legenda().length) {
+    <div class="legenda" role="group" aria-label="Barbeiros na grade">
+      @for (barbeiro of legenda(); track barbeiro.id) {
+        <button
+          type="button"
+          class="barbeiro"
+          [attr.aria-pressed]="barbeiro.ligado"
+          (click)="alternar(barbeiro.id)"
+        >
+          <span
+            class="cor"
+            aria-hidden="true"
+            [style.border-color]="barbeiro.cor"
+            [style.background-color]="barbeiro.ligado ? barbeiro.cor : 'transparent'"
+          ></span>
+          {{ barbeiro.nome }}
+        </button>
+      }
+    </div>
+  }
+
+  <app-calendario
+    [class.carregando]="carregando()"
+    [attr.aria-busy]="carregando()"
+    [eventos]="eventos()"
+    [dia]="semana().de"
+    (mudouSemana)="irPara($event)"
+    (clicouVazio)="painel.set({ tipo: 'marcar', inicio: $event })"
+    (clicouEvento)="painel.set({ tipo: 'detalhes', agendamento: $event })"
+  />
+</main>

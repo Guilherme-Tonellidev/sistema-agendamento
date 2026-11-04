@@ -1,0 +1,123 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 40px clamp(16px, 4vw, 56px) 56px;
+}
+
+.aviso {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.topo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+}
+
+h1 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-weight: 800;
+  font-size: clamp(52px, 8vw, 72px);
+  line-height: 0.9;
+}
+
+.cancelados {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.cancelados input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--dourado-botao);
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.barbeiro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1.5px solid var(--cinza);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--texto-claro);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Desligado: a bolinha fica vazada e o nome esmaece. */
+.barbeiro[aria-pressed='false'] {
+  color: var(--texto-suave);
+}
+
+.cor {
+  width: 14px;
+  height: 14px;
+  border: 2px solid;
+  border-radius: 50%;
+}
+
+/* Enquanto busca outra semana, a que já estava na tela esmaece em vez de sumir. */
+app-calendario {
+  display: block;
+  transition: opacity 0.2s;
+}
+
+app-calendario.carregando {
+  opacity: 0.35;
+}
+
+/*
+ * O FullCalendar monta a grade no DOM por conta própria, sem os atributos do encapsulamento:
+ * ::ng-deep alcança esses elementos, e o :host na frente prende as regras a esta página.
+ */
+:host ::ng-deep .fc {
+  --fc-border-color: var(--linha);
+  --fc-page-bg-color: var(--carvao);
+  --fc-neutral-bg-color: var(--vidro);
+  --fc-today-bg-color: rgb(200 160 75 / 10%);
+  --fc-now-indicator-color: var(--dourado);
+  --fc-button-text-color: var(--texto-claro);
+  --fc-button-bg-color: transparent;
+  --fc-button-border-color: var(--cinza);
+  --fc-button-hover-bg-color: var(--linha);
+  --fc-button-hover-border-color: var(--cinza);
+  --fc-button-active-bg-color: var(--dourado-botao);
+  --fc-button-active-border-color: var(--dourado-botao);
+}
+
+:host ::ng-deep .fc .fc-toolbar-title {
+  font-family: var(--fonte-titulo);
+  font-weight: 800;
+  font-size: 28px;
+}
+
+/* 0,7 ainda deixa o texto branco legível sobre as cores da paleta. */
+:host ::ng-deep .fc-event.status-concluido,
+:host ::ng-deep .fc-event.status-cancelado {
+  opacity: 0.7;
+}
+
+:host ::ng-deep .fc-event.status-cancelado .fc-event-title {
+  text-decoration: line-through;
+}
+
+/* A cor do barbeiro vem na borda como estilo inline; só o !important passa por cima dela. */
+:host ::ng-deep .fc-event.status-nao_compareceu {
+  border: 2px solid var(--neon-vermelho) !important;
+}
