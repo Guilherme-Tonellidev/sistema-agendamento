@@ -8,6 +8,7 @@ import { conteudo, ultimoValor } from '../../core/api/recursos';
 import { dataNoFuso } from '../../core/datas';
 import { Cabecalho } from '../../compartilhado/cabecalho/cabecalho';
 import { Calendario } from './calendario';
+import { FormularioMarcar } from './formulario-marcar';
 import { corDoBarbeiro, paraEvento, semanaDe, todasAsPaginas } from './eventos';
 
 type Painel =
@@ -17,7 +18,7 @@ type Painel =
 
 @Component({
   selector: 'app-semana',
-  imports: [Cabecalho, Calendario],
+  imports: [Cabecalho, Calendario, FormularioMarcar],
   templateUrl: './semana.html',
   styleUrl: './semana.css',
 })
@@ -106,6 +107,12 @@ export class Semana {
       }
       return novos;
     });
+  }
+
+  /** O bloco novo aparece na grade com a semana buscada de novo. */
+  protected marcou(): void {
+    this.painel.set(null);
+    this.lista.reload();
   }
 
   /** Repete as buscas que falharam. */

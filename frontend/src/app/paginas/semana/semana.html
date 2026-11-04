@@ -42,13 +42,27 @@
     </div>
   }
 
-  <app-calendario
-    [class.carregando]="carregando()"
-    [attr.aria-busy]="carregando()"
-    [eventos]="eventos()"
-    [dia]="semana().de"
-    (mudouSemana)="irPara($event)"
-    (clicouVazio)="painel.set({ tipo: 'marcar', inicio: $event })"
-    (clicouEvento)="painel.set({ tipo: 'detalhes', agendamento: $event })"
-  />
+  <div class="area" [class.com-painel]="painel()?.tipo === 'marcar'">
+    <app-calendario
+      [class.carregando]="carregando()"
+      [attr.aria-busy]="carregando()"
+      [eventos]="eventos()"
+      [dia]="semana().de"
+      (mudouSemana)="irPara($event)"
+      (clicouVazio)="painel.set({ tipo: 'marcar', inicio: $event })"
+      (clicouEvento)="painel.set({ tipo: 'detalhes', agendamento: $event })"
+    />
+
+    @if (painel(); as aberto) {
+      @if (aberto.tipo === 'marcar') {
+        <aside class="lado">
+          <app-formulario-marcar
+            [inicio]="aberto.inicio"
+            (marcado)="marcou()"
+            (voltar)="painel.set(null)"
+          />
+        </aside>
+      }
+    }
+  </div>
 </main>
