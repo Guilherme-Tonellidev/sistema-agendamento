@@ -21,6 +21,7 @@ import com.guilhermetonelli.agendamento.Cenario.Cadastro;
 import com.guilhermetonelli.agendamento.IntegracaoTest;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoRequest;
 import com.guilhermetonelli.agendamento.agendamento.dto.AgendamentoResponse;
+import com.guilhermetonelli.agendamento.agendamento.dto.EncaixeRequest;
 import com.guilhermetonelli.agendamento.agendamento.dto.ReagendamentoRequest;
 import com.guilhermetonelli.agendamento.disponibilidade.dto.BloqueioRequest;
 import com.jayway.jsonpath.JsonPath;
@@ -75,6 +76,19 @@ class RegraDeTempoApiTest extends IntegracaoTest {
         assertThat(noPassado.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(alemDaJanela.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(doCliente).satisfies(regraDeNegocio("só está aberta"));
+    }
+
+    @Test
+    void adminEncaixaNoPassadoEAlemDaJanelaMasProfissionalNao() {
+        relogio.ajustar(Instant.parse("2026-10-21T13:00:00Z"));
+
+        var noPassado = encaixar(api, ana, AS_8H, "Júlia Prado");
+        var alemDaJanela = encaixar(api, ana, DAQUI_A_91_DIAS, "Marcos Vieira");
+        var daAna = encaixar(apiComo(comoProfissional(ana)), ana, AS_8H30, "Rita Nunes");
+
+        assertThat(noPassado.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(alemDaJanela.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(daAna).satisfies(regraDeNegocio("passou"));
     }
 
     @Test
@@ -140,6 +154,14 @@ class RegraDeTempoApiTest extends IntegracaoTest {
         return quem.post().uri("/api/agendamentos")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new AgendamentoRequest(barbeiro, cenario.corte(), cliente.id(), Instant.parse(inicio)))
+                .retrieve()
+                .toEntity(String.class);
+    }
+
+    private ResponseEntity<String> encaixar(RestClient quem, UUID barbeiro, String inicio, String nomeDoCliente) {
+        return quem.post().uri("/api/agendamentos/encaixe")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new EncaixeRequest(barbeiro, cenario.corte(), Instant.parse(inicio), nomeDoCliente, null))
                 .retrieve()
                 .toEntity(String.class);
     }

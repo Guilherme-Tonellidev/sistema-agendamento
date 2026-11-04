@@ -106,14 +106,15 @@ public class AgendamentoService {
 
     /**
      * Quem chegou sem reserva entra na agenda cadastrado só com o nome. Sem antecedência mínima: ela protege o
-     * profissional de reservas em cima da hora, e aqui é ele mesmo (ou o administrador) quem marca.
+     * profissional de reservas em cima da hora, e aqui é ele mesmo (ou o administrador) quem marca. O tempo segue
+     * a regra de quem marca: o administrador também encaixa no passado e além da janela de reserva.
      */
     @Transactional
     public AgendamentoResponse encaixar(EncaixeRequest request, UsuarioLogado eu) {
         eu.garantirAgendaDe(request.profissionalId());
         Profissional profissional = profissionalService.obterComTrava(request.profissionalId());
         Cliente cliente = clienteService.cadastrarSemConta(request.nomeDoCliente(), request.telefone());
-        return marcar(profissional, request.servicoId(), cliente, request.inicio(), Antecedencia.NENHUMA, eu);
+        return marcar(profissional, request.servicoId(), cliente, request.inicio(), antecedenciaDeReserva(eu), eu);
     }
 
     public Page<AgendamentoResponse> listar(AgendamentoFiltro pedido, Pageable pageable, UsuarioLogado eu) {
