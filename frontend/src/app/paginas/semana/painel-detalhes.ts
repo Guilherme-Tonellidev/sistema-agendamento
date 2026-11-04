@@ -145,8 +145,11 @@ export class PainelDetalhes {
     }
   }
 
-  /** Depois de qualquer ação: o histórico ganhou um evento e o painel mostra o novo estado. */
-  protected atualizou(agendamento: Agendamento): void {
+  /**
+   * Depois de qualquer ação, inclusive o arraste do bloco na grade (a Semana chama): o histórico
+   * ganhou um evento e o painel mostra o novo estado.
+   */
+  atualizou(agendamento: Agendamento): void {
     this.remarcando.set(false);
     this.linhaDoTempo().recarregar();
     this.mudou.emit(agendamento);

@@ -43,6 +43,27 @@ qualquer outro campo recebe `400`.
 6. Quem chega sem reserva é encaixado pelo barbeiro só com o nome (e, se quiser, o telefone): sem
    antecedência mínima, mas com as mesmas regras de jornada, bloqueio e conflito.
 
+## Semana do administrador
+
+A rota `/semana`, só para o administrador, mostra de segunda a domingo os agendamentos de todos os barbeiros num
+calendário, com uma cor por barbeiro. A legenda liga e desliga cada barbeiro, e "Mostrar cancelados" traz de volta os
+cancelamentos.
+
+| Quero... | Como |
+| --- | --- |
+| Marcar | Clique num horário vazio e escolha barbeiro, serviço, horário e cliente: um já cadastrado ou um novo, só com nome e telefone (encaixe). |
+| Ver o agendamento | Clique no bloco: dados do cliente, link do WhatsApp, cancelar, concluir e marcar falta (estes dois só depois do início) e o histórico de alterações. |
+| Remarcar | Arraste o bloco para outro horário ou use o botão "Remarcar" dos detalhes. Só o agendamento confirmado muda de horário; o barbeiro e a duração ficam como estão. |
+
+O administrador não tem trava de tempo: marca e remarca no passado e além da janela de reserva (90 dias por padrão), e
+remarca ou cancela agendamentos confirmados que já começaram. Jornada, bloqueio, alinhamento aos 15 minutos e conflito
+de horário continuam valendo. Quando o servidor recusa um arraste, o bloco volta ao lugar e o motivo aparece no topo da
+página.
+
+Para oferecer horários passados e além da janela, a tela chama `GET /api/profissionais/{id}/horarios-livres/encaixe` com
+`semLimite=true`. O parâmetro é só do administrador: profissional e cliente recebem `403`. A linha do tempo dos detalhes
+lê `GET /api/agendamentos/{id}/historico` (só administrador).
+
 ## Cache de horários
 
 A consulta de horários livres (`GET .../horarios-livres` e `.../horarios-livres/encaixe`) guarda no Redis os horários de um

@@ -8,6 +8,13 @@
     </p>
   }
 
+  @if (avisoDoArraste(); as mensagem) {
+    <p class="erro" role="alert">
+      {{ mensagem }}
+      <button type="button" class="link" (click)="avisoDoArraste.set(null)">Fechar</button>
+    </p>
+  }
+
   <div class="topo">
     <h1>Semana</h1>
     <label class="cancelados">
@@ -51,6 +58,7 @@
       (mudouSemana)="irPara($event)"
       (clicouVazio)="painel.set({ tipo: 'marcar', inicio: $event })"
       (clicouEvento)="painel.set({ tipo: 'detalhes', agendamento: $event })"
+      (moveu)="remarcarPorArraste($event)"
     />
 
     @if (painel(); as aberto) {

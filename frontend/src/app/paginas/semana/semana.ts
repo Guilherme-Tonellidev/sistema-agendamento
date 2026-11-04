@@ -1,12 +1,13 @@
 import { HttpClient, httpResource } from '@angular/common/http';
-import { Component, computed, inject, resource, signal } from '@angular/core';
+import { Component, computed, inject, resource, signal, viewChild } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
+import { mensagemDeErro } from '../../core/api/erros';
 import { Agendamento, Pagina, Profissional } from '../../core/api/modelos';
 import { conteudo, falhaDe, ultimoValor } from '../../core/api/recursos';
 import { dataNoFuso } from '../../core/datas';
 import { Cabecalho } from '../../compartilhado/cabecalho/cabecalho';
-import { Calendario } from './calendario';
+import { BlocoMovido, Calendario } from './calendario';
 import { FormularioMarcar } from './formulario-marcar';
 import { PainelDetalhes } from './painel-detalhes';
 import { corDoBarbeiro, paraEvento, semanaDe, todasAsPaginas } from './eventos';
@@ -99,8 +100,16 @@ export class Semana {
     return falhou ? falhaDe(falhou, 'Não foi possível carregar a semana.') : null;
   });
 
+  /** A recusa do último arraste, até o próximo que der certo, a troca de semana ou o Fechar. */
+  protected readonly avisoDoArraste = signal<string | null>(null);
+  /** Blocos com a remarcação a caminho: soltar o mesmo bloco de novo não abre outro pedido. */
+  private readonly remarcandoAgora = new Set<string>();
+  private readonly detalhesAbertos = viewChild(PainelDetalhes);
+
+  /** Trocar de semana tira o aviso do arraste: ele falava de um bloco da semana anterior. */
   protected irPara(dia: string): void {
     this.semana.set(semanaDe(dia));
+    this.avisoDoArraste.set(null);
   }
 
   protected alternar(id: string): void {
@@ -126,6 +135,41 @@ export class Semana {
   protected atualizou(agendamento: Agendamento): void {
     this.painel.set({ tipo: 'detalhes', agendamento });
     this.lista.reload();
+  }
+
+  /** Bloco solto em outro horário: o servidor confirma, ou o bloco volta e o motivo vai ao topo. */
+  protected async remarcarPorArraste({
+    agendamento,
+    novoInicio,
+    reverter,
+  }: BlocoMovido): Promise<void> {
+    const { id } = agendamento;
+    if (this.remarcandoAgora.has(id)) {
+      reverter();
+      return;
+    }
+    this.remarcandoAgora.add(id);
+    let remarcado: Agendamento;
+    try {
+      remarcado = await firstValueFrom(
+        this.http.patch<Agendamento>(`/api/agendamentos/${id}/reagendar`, { inicio: novoInicio }),
+      );
+    } catch (erro) {
+      reverter();
+      this.avisoDoArraste.set(mensagemDeErro(erro, 'Não foi possível remarcar.'));
+      return;
+    } finally {
+      this.remarcandoAgora.delete(id);
+    }
+    this.avisoDoArraste.set(null);
+    // Com os detalhes deste bloco abertos, o painel segue o mesmo caminho do botão Remarcar:
+    // mostra o novo horário, recarrega o histórico e pede a semana de novo.
+    const detalhes = this.detalhesAbertos();
+    if (detalhes?.agendamento().id === id) {
+      detalhes.atualizou(remarcado);
+    } else {
+      this.lista.reload();
+    }
   }
 
   /** Repete as buscas que falharam. */

@@ -22,7 +22,15 @@ import { EventoDaGrade, semanaDe } from './eventos';
 
 const agendamentoDo = (evento: EventApi) => evento.extendedProps['agendamento'] as Agendamento;
 
-/** A grade semanal do FullCalendar: recebe eventos e o dia a mostrar, devolve cliques e navegação. */
+/** Um bloco solto em outro horário. Quem recebe confirma no servidor ou chama `reverter`. */
+export interface BlocoMovido {
+  readonly agendamento: Agendamento;
+  /** O novo início como instante ISO (UTC), o formato que a API lê. */
+  readonly novoInicio: string;
+  readonly reverter: () => void;
+}
+
+/** A grade semanal do FullCalendar: recebe os eventos, devolve cliques, arrastes e navegação. */
 @Component({
   selector: 'app-calendario',
   // Uma div própria: o FullCalendar mexe nas classes dela sem disputar o host com o Angular.
@@ -34,7 +42,7 @@ export class Calendario {
 
   readonly clicouVazio = output<Date>();
   readonly clicouEvento = output<Agendamento>();
-  readonly moveu = output<{ agendamento: Agendamento; novoInicio: string; reverter: () => void }>();
+  readonly moveu = output<BlocoMovido>();
   readonly mudouSemana = output<string>();
 
   private readonly grade = viewChild.required<ElementRef<HTMLElement>>('grade');
@@ -59,8 +67,8 @@ export class Calendario {
         snapDuration: passo,
         slotMinTime: { hours: abre },
         slotMaxTime: { hours: fecha },
-        // Arrastar fica desligado até a remarcação pela grade existir.
-        editable: false,
+        // Só arrasta quem tem startEditable (o confirmado, em paraEvento); esticar não pode.
+        editable: true,
         eventDurationEditable: false,
         // Eventos focáveis pelo teclado, abrindo os detalhes como o clique.
         eventInteractive: true,
@@ -86,14 +94,8 @@ export class Calendario {
     });
     inject(DestroyRef).onDestroy(() => this.calendario()?.destroy());
 
-    // O startEditable de cada evento passaria por cima do editable. Provisório: o Task 9 tira
-    // este startEditable: false junto com a troca do editable para true.
-    effect(() =>
-      this.calendario()?.setOption(
-        'events',
-        this.eventos().map((evento) => ({ ...evento, startEditable: false })),
-      ),
-    );
+    // Em cópia: o FullCalendar só aceita lista mutável.
+    effect(() => this.calendario()?.setOption('events', [...this.eventos()]));
 
     // Só navega quando a semana visível é outra: o datesSet devolve a mesma e o ciclo para.
     effect(() => {
