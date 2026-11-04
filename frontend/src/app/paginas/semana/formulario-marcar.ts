@@ -2,7 +2,6 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import {
   Component,
   DestroyRef,
-  Resource,
   computed,
   inject,
   input,
@@ -21,7 +20,7 @@ import {
 } from '@angular/forms/signals';
 import { Observable, firstValueFrom } from 'rxjs';
 
-import { errosDoEnvio, mensagemDeErro } from '../../core/api/erros';
+import { errosDoEnvio } from '../../core/api/erros';
 import {
   Agendamento,
   ClienteCadastrado,
@@ -31,7 +30,7 @@ import {
   Profissional,
   ProfissionalComServicos,
 } from '../../core/api/modelos';
-import { conteudo, ultimoValor } from '../../core/api/recursos';
+import { conteudo, falhaDe, ultimoValor } from '../../core/api/recursos';
 import { comMaiuscula, dataNoFuso, dataPorExtenso, horaNoFuso } from '../../core/datas';
 import { Ingresso } from '../../compartilhado/ingresso/ingresso';
 import { TelefonePipe, soDigitos, telefoneOpcional } from '../../compartilhado/telefone';
@@ -41,13 +40,6 @@ import { escolherHorario } from './marcar';
 const HORARIOS_VISIVEIS = 8;
 /** Espera entre a última tecla e a busca de clientes. */
 const ESPERA_DA_BUSCA_MS = 300;
-
-/** A mensagem de uma busca que falhou, ou null. */
-function falhaDe(busca: Resource<unknown>, padrao: string): string | null {
-  const erro = busca.error();
-  // O resource pode embrulhar o HttpErrorResponse no cause, como na Semana.
-  return erro ? mensagemDeErro(erro.cause ?? erro, padrao) : null;
-}
 
 /** Marca pela grade: barbeiro, serviço, horário do dia clicado e cliente (cadastrado ou novo). */
 @Component({

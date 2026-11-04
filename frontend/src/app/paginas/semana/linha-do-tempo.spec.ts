@@ -43,6 +43,12 @@ describe('fraseDoEvento', () => {
     expect(fraseDoEvento(evento({ tipo: 'NAO_COMPARECEU' }))).toBe('Falta registrada por Ana');
   });
 
+  it('tipo novo que a tela ainda não conhece aparece pelo nome', () => {
+    const futuro = evento({ tipo: 'REABERTO' as EventoDoHistorico['tipo'] });
+
+    expect(fraseDoEvento(futuro)).toBe('REABERTO por Ana');
+  });
+
   it('sem autor, foi o sistema', () => {
     expect(fraseDoEvento(evento({ autor: SISTEMA }))).toBe('Criado pelo sistema');
     expect(fraseDoEvento(evento({ autor: SISTEMA, tipo: 'CANCELADO', motivo: 'Imprevisto' }))).toBe(

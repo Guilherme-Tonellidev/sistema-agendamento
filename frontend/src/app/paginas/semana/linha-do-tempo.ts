@@ -1,18 +1,10 @@
 import { httpResource } from '@angular/common/http';
-import { Component, Resource, computed, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
-import { mensagemDeErro } from '../../core/api/erros';
 import { EventoDoHistorico } from '../../core/api/modelos';
+import { falhaDe } from '../../core/api/recursos';
 import { diaEHora } from '../../core/datas';
 import { fraseDoEvento } from './frase-do-evento';
-
-export { fraseDoEvento } from './frase-do-evento';
-
-/** Cópia do helper do FormularioMarcar; vira compartilhado quando houver um terceiro uso. */
-function falhaDe(busca: Resource<unknown>, padrao: string): string | null {
-  const erro = busca.error();
-  return erro ? mensagemDeErro(erro.cause ?? erro, padrao) : null;
-}
 
 /** Quem criou, remarcou, cancelou, concluiu ou marcou falta, e quando. */
 @Component({
@@ -73,4 +65,9 @@ export class LinhaDoTempo {
   protected readonly falha = computed(() =>
     falhaDe(this.historico, 'Não foi possível carregar o histórico.'),
   );
+
+  /** O id não muda depois de uma ação: quem mudou o agendamento pede a busca de novo. */
+  recarregar(): void {
+    this.historico.reload();
+  }
 }

@@ -9,7 +9,7 @@
     [agendamento]="atendimento"
     [agora]="agora()"
     [cancelaDepoisDoInicio]="true"
-    (mudou)="mudou.emit()"
+    (mudou)="atualizou($event)"
   />
 
   <section class="extra" aria-label="Remarcar e histórico">

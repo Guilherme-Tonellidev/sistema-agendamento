@@ -19,5 +19,6 @@ export function fraseDoEvento({ tipo, autor, de, para, motivo }: EventoDoHistori
   // Sem papel é o próprio sistema (nome "Sistema").
   const quem = autor.papel === null ? 'pelo sistema' : `por ${autor.nome}`;
   const porque = tipo === 'CANCELADO' && motivo ? `: ${motivo}` : '';
-  return `${ACAO[tipo]}${mudanca} ${quem}${porque}`;
+  // Tipo que a API passar a mandar antes da tela conhecê-lo sai pelo nome, não como "undefined".
+  return `${ACAO[tipo] ?? tipo}${mudanca} ${quem}${porque}`;
 }

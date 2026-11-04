@@ -58,14 +58,14 @@
         @if (aberto.tipo === 'marcar') {
           <app-formulario-marcar
             [inicio]="aberto.inicio"
-            (marcado)="mudou()"
+            (marcado)="marcou()"
             (voltar)="painel.set(null)"
           />
         }
         @for (agendamento of detalhes(); track agendamento.id) {
           <app-painel-detalhes
             [agendamento]="agendamento"
-            (mudou)="mudou()"
+            (mudou)="atualizou($event)"
             (fechar)="painel.set(null)"
           />
         }

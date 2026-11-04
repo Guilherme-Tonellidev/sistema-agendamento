@@ -35,8 +35,8 @@ export class PainelAtendimento {
   readonly agora = input.required<Date>();
   /** O administrador cancela mesmo depois do início; a /agenda do barbeiro não. */
   readonly cancelaDepoisDoInicio = input(false);
-  /** Concluído, falta registrada ou cancelado: a agenda recarrega. */
-  readonly mudou = output<void>();
+  /** Concluído, falta registrada ou cancelado, como o servidor devolveu (a agenda só recarrega). */
+  readonly mudou = output<Agendamento>();
 
   protected readonly estado = computed(() => estadoDe(this.agendamento(), this.agora()));
   protected readonly situacao = computed(() => SITUACAO[this.estado()]);
@@ -83,11 +83,11 @@ export class PainelAtendimento {
     this.enviando.set(true);
     this.erro.set(null);
     try {
-      await firstValueFrom(
-        this.http.patch(`/api/agendamentos/${this.agendamento().id}/${acao}`, null),
+      const agendamento = await firstValueFrom(
+        this.http.patch<Agendamento>(`/api/agendamentos/${this.agendamento().id}/${acao}`, null),
       );
       this.confirmando.set(false);
-      this.mudou.emit();
+      this.mudou.emit(agendamento);
     } catch (erro) {
       this.erro.set(mensagemDeErro(erro, 'Não foi possível salvar agora. Tente de novo.'));
     } finally {

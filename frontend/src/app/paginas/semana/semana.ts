@@ -2,9 +2,8 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { mensagemDeErro } from '../../core/api/erros';
 import { Agendamento, Pagina, Profissional } from '../../core/api/modelos';
-import { conteudo, ultimoValor } from '../../core/api/recursos';
+import { conteudo, falhaDe, ultimoValor } from '../../core/api/recursos';
 import { dataNoFuso } from '../../core/datas';
 import { Cabecalho } from '../../compartilhado/cabecalho/cabecalho';
 import { Calendario } from './calendario';
@@ -96,9 +95,8 @@ export class Semana {
 
   private readonly buscas = [this.equipe, this.lista];
   protected readonly erro = computed(() => {
-    const erro = this.buscas.find((busca) => busca.error() !== undefined)?.error();
-    // O resource embrulha o que não é Error (como o HttpErrorResponse) no cause.
-    return erro ? mensagemDeErro(erro.cause ?? erro, 'Não foi possível carregar a semana.') : null;
+    const falhou = this.buscas.find((busca) => busca.error() !== undefined);
+    return falhou ? falhaDe(falhou, 'Não foi possível carregar a semana.') : null;
   });
 
   protected irPara(dia: string): void {
@@ -115,9 +113,18 @@ export class Semana {
     });
   }
 
-  /** Marcou, remarcou ou cancelou: fecha o painel, que ficaria velho, e busca a semana de novo. */
-  protected mudou(): void {
+  /** O bloco novo aparece na grade com a semana buscada de novo. */
+  protected marcou(): void {
     this.painel.set(null);
+    this.lista.reload();
+  }
+
+  /**
+   * Remarcou, cancelou, concluiu ou marcou falta: o painel segue aberto com o agendamento como o
+   * servidor devolveu (mesmo que ele saia da grade) e a semana é buscada de novo.
+   */
+  protected atualizou(agendamento: Agendamento): void {
+    this.painel.set({ tipo: 'detalhes', agendamento });
     this.lista.reload();
   }
 

@@ -1,5 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Agendamento } from '../../core/api/modelos';
@@ -22,17 +22,24 @@ const NO_MEIO = new Date('2026-11-10T13:10:00Z');
 
 describe('PainelAtendimento', () => {
   let fixture: ComponentFixture<PainelAtendimento>;
+  let servidor: HttpTestingController;
 
-  const botoes = () =>
-    [...(fixture.nativeElement as HTMLElement).querySelectorAll('button')].map((b) =>
-      b.textContent?.trim(),
-    );
+  const tela = () => fixture.nativeElement as HTMLElement;
+  const botoes = () => [...tela().querySelectorAll('button')].map((b) => b.textContent?.trim());
+  const botao = (texto: string) =>
+    [...tela().querySelectorAll('button')].find((b) => b.textContent?.trim() === texto)!;
+  /** Com requisição pendente o whenStable esperaria por ela: aqui quem responde é o teste. */
+  const assentar = async () => {
+    await new Promise<void>((pronto) => setTimeout(pronto));
+    TestBed.tick();
+  };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [PainelAtendimento],
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
+    servidor = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(PainelAtendimento);
     fixture.componentRef.setInput('agendamento', EM_ANDAMENTO);
     fixture.componentRef.setInput('agora', NO_MEIO);
@@ -52,5 +59,31 @@ describe('PainelAtendimento', () => {
     expect(botoes()).not.toContain('Cancelar e avisar o cliente');
     expect(botoes()).toContain('Concluir atendimento');
     expect(botoes()).toContain('Cliente não compareceu');
+  });
+
+  it('depois de cancelar, devolve o agendamento do servidor; com ele, oferece avisar no WhatsApp', async () => {
+    const comTelefone = {
+      ...EM_ANDAMENTO,
+      cliente: { ...EM_ANDAMENTO.cliente, telefone: '14998123344' },
+    };
+    fixture.componentRef.setInput('agendamento', comTelefone);
+    fixture.componentRef.setInput('agora', new Date('2026-11-10T12:00:00Z'));
+    const mudancas: Agendamento[] = [];
+    fixture.componentInstance.mudou.subscribe((agendamento) => mudancas.push(agendamento));
+    await assentar();
+
+    botao('Cancelar e avisar o cliente').click();
+    await assentar();
+    botao('Sim, cancelar').click();
+    await assentar();
+    const cancelado = { ...comTelefone, status: 'CANCELADO' as const };
+    servidor.expectOne({ method: 'PATCH', url: '/api/agendamentos/a1/cancelar' }).flush(cancelado);
+    await assentar();
+    // Como a Semana faz: o painel passa a mostrar o agendamento devolvido.
+    fixture.componentRef.setInput('agendamento', mudancas[0]);
+    await assentar();
+
+    expect(mudancas).toEqual([cancelado]);
+    expect(tela().querySelector('a')?.textContent).toContain('Avisar no WhatsApp');
   });
 });

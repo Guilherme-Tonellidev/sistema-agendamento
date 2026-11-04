@@ -2,31 +2,25 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import {
   Component,
   DestroyRef,
-  Resource,
   computed,
   inject,
   input,
   linkedSignal,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { mensagemDeErro } from '../../core/api/erros';
 import { Agendamento, HorarioLivre } from '../../core/api/modelos';
-import { ultimoValor } from '../../core/api/recursos';
+import { falhaDe, ultimoValor } from '../../core/api/recursos';
 import { comMaiuscula, dataNoFuso, dataPorExtenso, horaNoFuso } from '../../core/datas';
 import { PainelAtendimento } from '../agenda/painel-atendimento';
 import { LinhaDoTempo } from './linha-do-tempo';
 
 /** Em andamento vira pendente com o tempo, como na agenda. */
 const ATUALIZAR_A_CADA_MS = 60_000;
-
-/** Cópia do helper do FormularioMarcar; vira compartilhado quando houver um terceiro uso. */
-function falhaDe(busca: Resource<unknown>, padrao: string): string | null {
-  const erro = busca.error();
-  return erro ? mensagemDeErro(erro.cause ?? erro, padrao) : null;
-}
 
 /** O bloco clicado na semana: o atendimento com as ações do admin, remarcar e o histórico. */
 @Component({
@@ -74,11 +68,12 @@ export class PainelDetalhes {
   private readonly http = inject(HttpClient);
 
   readonly agendamento = input.required<Agendamento>();
-  /** Remarcou, cancelou, concluiu ou marcou falta: a semana recarrega e fecha o painel. */
-  readonly mudou = output<void>();
+  /** Remarcou, cancelou, concluiu ou marcou falta: o agendamento como o servidor devolveu. */
+  readonly mudou = output<Agendamento>();
   readonly fechar = output<void>();
 
   protected readonly agora = signal(new Date());
+  private readonly linhaDoTempo = viewChild.required(LinhaDoTempo);
 
   protected readonly resumo = computed(() => {
     const { inicio, profissional } = this.agendamento();
@@ -89,7 +84,11 @@ export class PainelDetalhes {
   });
 
   protected readonly remarcando = signal(false);
-  protected readonly dia = linkedSignal(() => dataNoFuso(this.agendamento().inicio));
+  /** Abrir o Remarcar volta ao dia do agendamento, também depois de remarcado. */
+  protected readonly dia = linkedSignal({
+    source: () => ({ aberto: this.remarcando(), inicio: this.agendamento().inicio }),
+    computation: ({ inicio }) => dataNoFuso(inicio),
+  });
   /** Sem limite: o administrador remarca para o passado e além da janela de reserva. */
   private readonly livres = httpResource<HorarioLivre[]>(() => {
     if (!this.remarcando()) {
@@ -132,13 +131,11 @@ export class PainelDetalhes {
     if (!inicio) {
       return;
     }
+    const url = `/api/agendamentos/${this.agendamento().id}/reagendar`;
     this.enviando.set(true);
     this.erro.set(null);
     try {
-      await firstValueFrom(
-        this.http.patch(`/api/agendamentos/${this.agendamento().id}/reagendar`, { inicio }),
-      );
-      this.mudou.emit();
+      this.atualizou(await firstValueFrom(this.http.patch<Agendamento>(url, { inicio })));
     } catch (erro) {
       this.erro.set(mensagemDeErro(erro, 'Não foi possível remarcar agora. Tente de novo.'));
       // Se alguém pegou o horário antes, a lista se atualiza.
@@ -146,5 +143,12 @@ export class PainelDetalhes {
     } finally {
       this.enviando.set(false);
     }
+  }
+
+  /** Depois de qualquer ação: o histórico ganhou um evento e o painel mostra o novo estado. */
+  protected atualizou(agendamento: Agendamento): void {
+    this.remarcando.set(false);
+    this.linhaDoTempo().recarregar();
+    this.mudou.emit(agendamento);
   }
 }

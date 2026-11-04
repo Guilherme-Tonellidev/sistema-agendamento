@@ -29,7 +29,7 @@ const LIVRES = [
 describe('PainelDetalhes', () => {
   let fixture: ComponentFixture<PainelDetalhes>;
   let servidor: HttpTestingController;
-  let mudancas: number;
+  let mudancas: Agendamento[];
 
   const tela = () => fixture.nativeElement as HTMLElement;
   /** Como no FormularioMarcar: sem whenStable, porque quem responde as requisições é o teste. */
@@ -66,8 +66,8 @@ describe('PainelDetalhes', () => {
     });
     servidor = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(PainelDetalhes);
-    mudancas = 0;
-    fixture.componentInstance.mudou.subscribe(() => mudancas++);
+    mudancas = [];
+    fixture.componentInstance.mudou.subscribe((agendamento) => mudancas.push(agendamento));
   });
 
   afterEach(() => servidor.verify());
@@ -79,10 +79,31 @@ describe('PainelDetalhes', () => {
     await assentar();
     const envio = servidor.expectOne({ method: 'PATCH', url: '/api/agendamentos/a1/reagendar' });
     expect(envio.request.body).toEqual({ inicio: '2026-11-10T14:30:00Z' });
-    envio.flush({ ...MARCADO, inicio: '2026-11-10T14:30:00Z' });
+    const remarcado = { ...MARCADO, inicio: '2026-11-10T14:30:00Z', fim: '2026-11-10T15:00:00Z' };
+    envio.flush(remarcado);
     await assentar();
 
-    expect(mudancas).toBe(1);
+    // Devolve o que o servidor respondeu, fecha o formulário e busca o histórico de novo.
+    expect(mudancas).toEqual([remarcado]);
+    expect(tela().querySelector('#horario-remarcar')).toBeNull();
+    servidor.expectOne(HISTORICO_URL).flush([]);
+  });
+
+  it('cancelar pelo atendimento repassa o agendamento cancelado e recarrega o histórico', async () => {
+    await abrir(MARCADO);
+    servidor.expectOne(HISTORICO_URL).flush([]);
+    await assentar();
+
+    botao('Cancelar e avisar o cliente')!.click();
+    await assentar();
+    botao('Sim, cancelar')!.click();
+    await assentar();
+    const cancelado = { ...MARCADO, status: 'CANCELADO' as const };
+    servidor.expectOne({ method: 'PATCH', url: '/api/agendamentos/a1/cancelar' }).flush(cancelado);
+    await assentar();
+
+    expect(mudancas).toEqual([cancelado]);
+    servidor.expectOne(HISTORICO_URL).flush([]);
   });
 
   it('se o servidor recusa (409), mostra o motivo e o formulário continua aberto', async () => {
@@ -105,7 +126,7 @@ describe('PainelDetalhes', () => {
       'Esse horário acabou de ser reservado.',
     );
     expect(tela().querySelector('#horario-remarcar')).not.toBeNull();
-    expect(mudancas).toBe(0);
+    expect(mudancas).toEqual([]);
   });
 
   it('agendamento concluído não tem o botão "Remarcar"', async () => {
