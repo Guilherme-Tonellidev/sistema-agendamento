@@ -55,6 +55,15 @@ export function instanteNoFuso(data: string, hora: string): Date {
   return new Date(2 * comoUtc.getTime() - mostrado.getTime());
 }
 
+/**
+ * Dia (AAAA-MM-DD) pelos campos locais do navegador. A grade em horário local mostra dias
+ * locais, então o dia da semana visível sai dos campos locais, não do fuso da barbearia.
+ */
+export function diaLocal(data: Date): string {
+  const doisDigitos = (numero: number) => String(numero).padStart(2, '0');
+  return `${data.getFullYear()}-${doisDigitos(data.getMonth() + 1)}-${doisDigitos(data.getDate())}`;
+}
+
 export function somarDias(data: string, dias: number): string {
   const dia = meioDiaUtc(data);
   dia.setUTCDate(dia.getUTCDate() + dias);

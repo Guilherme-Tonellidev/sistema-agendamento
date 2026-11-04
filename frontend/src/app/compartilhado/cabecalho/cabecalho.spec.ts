@@ -4,7 +4,11 @@ const rotulos = (papel: Parameters<typeof linksDo>[0]) => linksDo(papel).map((l)
 
 describe('linksDo', () => {
   it('dá ao administrador a agenda e a semana', () => {
-    expect(rotulos('ADMIN')).toEqual(['Serviços', 'Agenda', 'Semana']);
+    expect(linksDo('ADMIN')).toEqual([
+      { rota: '/servicos', rotulo: 'Serviços' },
+      { rota: '/agenda', rotulo: 'Agenda' },
+      { rota: '/semana', rotulo: 'Semana' },
+    ]);
   });
 
   it('dá ao barbeiro a própria agenda', () => {

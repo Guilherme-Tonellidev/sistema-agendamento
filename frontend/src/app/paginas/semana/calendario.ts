@@ -17,13 +17,8 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 
 import { Agendamento } from '../../core/api/modelos';
 import { INTERVALO_ENTRE_HORARIOS_EM_MINUTOS, faixaDeHoras } from '../../core/barbearia';
-import { dataNoFuso } from '../../core/datas';
+import { diaLocal } from '../../core/datas';
 import { EventoDaGrade, semanaDe } from './eventos';
-
-const MEIO_DIA_MS = 12 * 60 * 60 * 1000;
-
-/** O dia (AAAA-MM-DD) dessa meia-noite local, lido ao meio-dia para nenhum fuso cair na véspera. */
-const diaDe = (meiaNoite: Date) => dataNoFuso(new Date(meiaNoite.getTime() + MEIO_DIA_MS));
 
 const agendamentoDo = (evento: EventApi) => evento.extendedProps['agendamento'] as Agendamento;
 
@@ -70,7 +65,7 @@ export class Calendario {
         // Eventos focáveis pelo teclado, abrindo os detalhes como o clique.
         eventInteractive: true,
         height: 'auto',
-        datesSet: ({ view }) => this.mudouSemana.emit(diaDe(view.currentStart)),
+        datesSet: ({ view }) => this.mudouSemana.emit(diaLocal(view.currentStart)),
         // Clique em evento vai para o eventClick; aqui só chegam horários vazios.
         dateClick: ({ date }) => this.clicouVazio.emit(date),
         eventClick: ({ event }) => this.clicouEvento.emit(agendamentoDo(event)),
@@ -91,7 +86,8 @@ export class Calendario {
     });
     inject(DestroyRef).onDestroy(() => this.calendario()?.destroy());
 
-    // O startEditable de cada evento passaria por cima do editable: desligado também, por ora.
+    // O startEditable de cada evento passaria por cima do editable. Provisório: o Task 9 tira
+    // este startEditable: false junto com a troca do editable para true.
     effect(() =>
       this.calendario()?.setOption(
         'events',
@@ -103,7 +99,7 @@ export class Calendario {
     effect(() => {
       const calendario = this.calendario();
       const dia = this.dia();
-      if (calendario && diaDe(calendario.view.currentStart) !== semanaDe(dia).de) {
+      if (calendario && diaLocal(calendario.view.currentStart) !== semanaDe(dia).de) {
         calendario.gotoDate(dia);
       }
     });

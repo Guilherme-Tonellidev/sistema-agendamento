@@ -1,4 +1,4 @@
-import { dataNoFuso, horaNoFuso, instanteNoFuso, rotuloDoDia, somarDias } from './datas';
+import { dataNoFuso, diaLocal, horaNoFuso, instanteNoFuso, rotuloDoDia, somarDias } from './datas';
 
 describe('datas no fuso da barbearia', () => {
   it('um instante perto da meia-noite cai no dia e na hora de São Paulo', () => {
@@ -21,5 +21,16 @@ describe('datas no fuso da barbearia', () => {
     expect(rotuloDoDia('2026-10-21', '2026-10-21')).toBe('Hoje, quarta 21');
     expect(rotuloDoDia('2026-10-22', '2026-10-21')).toBe('Amanhã, quinta 22');
     expect(rotuloDoDia('2026-10-24', '2026-10-21')).toBe('Sábado, 24 de outubro');
+  });
+});
+
+describe('diaLocal', () => {
+  it('lê o dia dos campos locais, em qualquer fuso do navegador', () => {
+    expect(diaLocal(new Date(2026, 10, 2))).toBe('2026-11-02');
+  });
+
+  it('atravessa o fim do mês e do ano', () => {
+    expect(diaLocal(new Date(2026, 11, 31))).toBe('2026-12-31');
+    expect(diaLocal(new Date(2027, 0, 1))).toBe('2027-01-01');
   });
 });

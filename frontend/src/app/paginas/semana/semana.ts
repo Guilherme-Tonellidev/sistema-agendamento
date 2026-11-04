@@ -30,7 +30,8 @@ export class Semana {
   });
 
   private readonly equipe = httpResource(
-    () => ({ url: '/api/profissionais', params: { ativo: true, size: 50 } }),
+    // Inativos também: os agendamentos antigos deles seguem na grade, com cor e legenda.
+    () => ({ url: '/api/profissionais', params: { size: 50 } }),
     { parse: conteudo<Profissional> },
   );
   protected readonly barbeiros = ultimoValor(this.equipe, []);
@@ -53,14 +54,23 @@ export class Semana {
   protected readonly ocultos = signal<ReadonlySet<string>>(new Set());
   protected readonly mostrarCancelados = signal(false);
 
+  private readonly naSemana = computed(
+    () => new Set(this.agendamentos().map(({ profissional }) => profissional.id)),
+  );
+
+  /** A cor sai da equipe inteira, igual em toda semana; inativo só entra se atendeu nesta. */
   protected readonly legenda = computed(() => {
     const equipe = this.barbeiros();
-    return equipe.map(({ id, nome }) => ({
-      id,
-      nome,
-      cor: corDoBarbeiro(equipe, id),
-      ligado: !this.ocultos().has(id),
-    }));
+    const naSemana = this.naSemana();
+    return equipe
+      .filter(({ id, ativo }) => ativo || naSemana.has(id))
+      .map(({ id, nome, ativo }) => ({
+        id,
+        nome,
+        ativo,
+        cor: corDoBarbeiro(equipe, id),
+        ligado: !this.ocultos().has(id),
+      }));
   });
 
   protected readonly eventos = computed(() => {
