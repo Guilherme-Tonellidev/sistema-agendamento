@@ -2,6 +2,7 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import {
   Component,
   DestroyRef,
+  Resource,
   computed,
   inject,
   input,
@@ -20,7 +21,7 @@ import {
 } from '@angular/forms/signals';
 import { Observable, firstValueFrom } from 'rxjs';
 
-import { errosDoEnvio } from '../../core/api/erros';
+import { errosDoEnvio, mensagemDeErro } from '../../core/api/erros';
 import {
   Agendamento,
   ClienteCadastrado,
@@ -40,6 +41,13 @@ import { escolherHorario } from './marcar';
 const HORARIOS_VISIVEIS = 8;
 /** Espera entre a última tecla e a busca de clientes. */
 const ESPERA_DA_BUSCA_MS = 300;
+
+/** A mensagem de uma busca que falhou, ou null. */
+function falhaDe(busca: Resource<unknown>, padrao: string): string | null {
+  const erro = busca.error();
+  // O resource pode embrulhar o HttpErrorResponse no cause, como na Semana.
+  return erro ? mensagemDeErro(erro.cause ?? erro, padrao) : null;
+}
 
 /** Marca pela grade: barbeiro, serviço, horário do dia clicado e cliente (cadastrado ou novo). */
 @Component({
@@ -78,6 +86,11 @@ export class FormularioMarcar {
         )
       : [],
   );
+  protected readonly falhaNaEquipe = computed(
+    () =>
+      falhaDe(this.equipe, 'Não foi possível carregar os barbeiros.') ??
+      falhaDe(this.profissional, 'Não foi possível carregar os serviços do barbeiro.'),
+  );
   protected readonly servicoId = signal<string | null>(null);
   /** Trocar para um barbeiro que não faz o serviço deixa o serviço sem escolha. */
   protected readonly servico = computed(
@@ -98,6 +111,10 @@ export class FormularioMarcar {
   });
   private readonly horarios = ultimoValor(this.livres, []);
   protected readonly buscando = this.livres.isLoading;
+  /** Com a busca falhando, a lista vazia não quer dizer "sem horário livre". */
+  protected readonly falhaNosHorarios = computed(() =>
+    falhaDe(this.livres, 'Não foi possível carregar os horários.'),
+  );
 
   /** Volta ao horário mais perto do clique sempre que a lista ou o clique mudam. */
   protected readonly escolhido = linkedSignal<

@@ -75,8 +75,8 @@ describe('FormularioMarcar', () => {
 
   afterEach(() => servidor.verify());
 
-  /** Barbeiro e serviço escolhidos; o horário do clique vem pré-selecionado. */
-  async function escolherBarbeiroEServico(): Promise<void> {
+  /** Barbeiro e serviço escolhidos; a busca dos horários fica pendente. */
+  async function pedirHorarios(): Promise<void> {
     servidor.expectOne('/api/profissionais?size=50').flush(pagina([RAFAEL]));
     await assentar();
     botao('Rafael').click();
@@ -85,6 +85,11 @@ describe('FormularioMarcar', () => {
     await assentar();
     botao('Corte').click();
     await assentar();
+  }
+
+  /** Barbeiro e serviço escolhidos; o horário do clique vem pré-selecionado. */
+  async function escolherBarbeiroEServico(): Promise<void> {
+    await pedirHorarios();
     servidor.expectOne(LIVRES_URL).flush([
       { inicio: '2026-11-10T12:30:00Z', fim: '2026-11-10T13:00:00Z' },
       { inicio: '2026-11-10T13:00:00Z', fim: '2026-11-10T13:30:00Z' },
@@ -108,6 +113,29 @@ describe('FormularioMarcar', () => {
     await escolherBarbeiroEServico();
 
     expect(botao('10:00').getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('se a busca de horários falha, avisa em vez de dizer que não há horário livre', async () => {
+    await pedirHorarios();
+    servidor.expectOne(LIVRES_URL).flush(null, { status: 500, statusText: 'Erro' });
+    await assentar();
+
+    // Sem corpo do servidor, vale o texto padrão do mensagemDeErro.
+    expect(tela().querySelector('[role="alert"]')?.textContent).toContain(
+      'Não foi possível carregar os horários.',
+    );
+    expect(tela().textContent).not.toContain('Nenhum horário livre');
+  });
+
+  it('se a equipe não carrega, avisa em vez de mostrar a lista vazia', async () => {
+    servidor
+      .expectOne('/api/profissionais?size=50')
+      .flush(null, { status: 500, statusText: 'Erro' });
+    await assentar();
+
+    expect(tela().querySelector('[role="alert"]')?.textContent).toContain(
+      'Não foi possível carregar os barbeiros.',
+    );
   });
 
   it('com cliente cadastrado, reserva para ele no horário clicado', async () => {

@@ -49,6 +49,10 @@
       </div>
     }
 
+    @if (falhaNaEquipe(); as mensagem) {
+      <p class="erro" role="alert">{{ mensagem }}</p>
+    }
+
     <div class="campo">
       <span class="titulo-campo" id="horario-marcar">Horários livres</span>
       @if (opcoes().length) {
@@ -71,6 +75,8 @@
           }
         </div>
         <p class="nota">Para outro horário, clique na grade.</p>
+      } @else if (falhaNosHorarios(); as mensagem) {
+        <p class="erro" role="alert">{{ mensagem }}</p>
       } @else {
         <p class="nota">
           @if (!servico()) {
