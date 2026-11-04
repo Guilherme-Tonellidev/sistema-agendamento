@@ -1,12 +1,25 @@
 package com.guilhermetonelli.agendamento.shared.domain;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.HexFormat;
 import java.util.Locale;
 
 /** Normalizações de texto usadas pelas entidades antes de salvar. */
 public final class Textos {
 
     private Textos() {}
+
+    /** SHA-256 em hexadecimal: para guardar só o hash de um token ou e-mail, nunca o valor. */
+    public static String sha256(String texto) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(texto.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 é obrigatório em toda JVM", e);
+        }
+    }
 
     /** E-mails são guardados em minúsculas, para que "Ana@x.com" e "ana@x.com" sejam o mesmo. */
     public static String normalizarEmail(String email) {

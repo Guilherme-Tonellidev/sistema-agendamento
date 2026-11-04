@@ -3,11 +3,7 @@ package com.guilhermetonelli.agendamento.seguranca;
 import static com.guilhermetonelli.agendamento.seguranca.LimiteDeTentativas.JANELA;
 import static com.guilhermetonelli.agendamento.seguranca.LimiteDeTentativas.MAXIMO;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.util.HexFormat;
 import java.util.List;
 
 import org.springframework.data.redis.core.Cursor;
@@ -15,6 +11,8 @@ import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
+
+import com.guilhermetonelli.agendamento.shared.domain.Textos;
 
 /**
  * Conta as tentativas de login no Redis: a contagem vale entre as instâncias da API e sobrevive a reinícios.
@@ -67,11 +65,6 @@ class ContadorRedis {
 
     /** O Redis guarda só o hash: nenhum e-mail fica à vista no servidor. */
     private static String chaveNoRedis(String chave) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(chave.getBytes(StandardCharsets.UTF_8));
-            return PREFIXO + HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 é obrigatório em toda JVM", e);
-        }
+        return PREFIXO + Textos.sha256(chave);
     }
 }
