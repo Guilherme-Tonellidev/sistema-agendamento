@@ -1,6 +1,9 @@
 package com.guilhermetonelli.agendamento.profissional;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -95,6 +98,11 @@ public class ProfissionalService {
     /** Cadastro existente e ativo. O login do profissional depende disso: quem foi inativado perde o acesso. */
     public boolean estaAtivo(UUID id) {
         return repository.existsByIdAndAtivoTrue(id);
+    }
+
+    /** Nomes de vários profissionais numa consulta só; quem não existe fica de fora do mapa. */
+    public Map<UUID, String> nomesPorId(Collection<UUID> ids) {
+        return repository.findAllById(ids).stream().collect(Collectors.toMap(Profissional::getId, Profissional::getNome));
     }
 
     public void garantirQueExiste(UUID id) {

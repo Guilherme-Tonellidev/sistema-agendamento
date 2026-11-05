@@ -99,7 +99,9 @@ class DisponibilidadeController {
     }
 
     @GetMapping("/horarios-livres/encaixe")
-    @Operation(summary = "Horários livres a partir de agora, para encaixar quem chegou sem reserva (profissional ou administrador)")
+    @Operation(
+            summary = "Horários livres a partir de agora, para encaixar quem chegou sem reserva (profissional ou administrador)",
+            description = "Com semLimite=true, só para o administrador, traz também o que já passou e os dias além da janela de reserva.")
     List<HorarioLivreResponse> horariosParaEncaixe(
             @PathVariable UUID id,
             @RequestParam UUID servicoId,

@@ -12,10 +12,10 @@ desenvolvimento: o perfil `prod` desliga o Swagger UI e o `/v3/api-docs`.
 | Serviços | `POST /api/servicos` · `GET /api/servicos` · `GET/PUT /api/servicos/{id}` · `PATCH /api/servicos/{id}/ativar` e `/inativar` |
 | Profissionais | `POST /api/profissionais` · `GET /api/profissionais` · `GET/PUT /api/profissionais/{id}` · `PUT /api/profissionais/{id}/servicos` · `PATCH .../ativar` e `/inativar` |
 | Clientes | `POST /api/clientes` · `GET /api/clientes` · `GET/PUT /api/clientes/{id}` |
-| Disponibilidade | `GET/PUT /api/profissionais/{id}/jornada` · `POST/GET /api/profissionais/{id}/bloqueios` · `DELETE .../bloqueios/{bloqueioId}` · `GET /api/profissionais/{id}/horarios-livres?servicoId=&data=` · `GET .../horarios-livres/encaixe` |
+| Disponibilidade | `GET/PUT /api/profissionais/{id}/jornada` · `POST/GET /api/profissionais/{id}/bloqueios` · `DELETE .../bloqueios/{bloqueioId}` · `GET /api/profissionais/{id}/horarios-livres?servicoId=&data=` · `GET .../horarios-livres/encaixe` (com `semLimite=true`, só administrador) |
 | Autenticação | `POST /api/auth/cadastro` · `POST /api/auth/login` · `POST /api/auth/refresh` · `POST /api/auth/logout` · `GET /api/auth/eu` |
 | Notificações | `GET /api/notificacoes` (as 20 mais recentes e quantas faltam ler) · `PATCH /api/notificacoes/{id}/ler` · `PATCH /api/notificacoes/ler-todas` |
-| Agendamentos | `POST /api/agendamentos` · `POST /api/agendamentos/encaixe` · `GET /api/agendamentos` · `GET /api/agendamentos/{id}` · `PATCH .../{id}/cancelar`, `/reagendar`, `/concluir` e `/nao-compareceu` |
+| Agendamentos | `POST /api/agendamentos` · `POST /api/agendamentos/encaixe` · `GET /api/agendamentos` · `GET /api/agendamentos/{id}` · `PATCH .../{id}/cancelar`, `/reagendar`, `/concluir` e `/nao-compareceu` · `GET /api/agendamentos/{id}/historico` (só administrador) |
 
 `POST /api/auth/login` responde `429` (com `Retry-After`, em segundos) depois de 5 tentativas em 15 minutos para o mesmo
 e-mail e a mesma origem; um login correto zera a contagem. A contagem fica no Redis e vale entre as instâncias da API;
@@ -23,6 +23,17 @@ com o Redis fora do ar, o login segue e cada instância conta por conta própria
 conexão: atrás de um proxy reverso ela é a do proxy, então o servidor precisa confiar no `X-Forwarded-For` dele (e só
 nele) ou o limite passa a valer por e-mail para todos. O `docker-compose.prod.yml` já faz isso (`SERVER_FORWARD_HEADERS_STRATEGY=native`)
 e publica a porta da API só em `127.0.0.1`: ponha o proxy reverso, com TLS, no mesmo host. Fora do Compose, repita as duas coisas.
+
+`GET .../horarios-livres/encaixe` aceita `semLimite=true`, só para o administrador: os outros recebem `403`. Com ele a lista
+ignora o que já passou, a antecedência mínima e a janela de reservas (90 dias por padrão), e traz todos os horários livres
+do dia. Jornada, bloqueio e alinhamento aos 15 minutos continuam valendo. Sem o parâmetro, nada muda.
+
+`GET /api/agendamentos/{id}/historico` devolve a linha do tempo do agendamento, do evento mais antigo ao mais novo, só para
+o administrador (`403` para os outros, `404` se o agendamento não existe). Cada evento tem `quando`, `autor` (`nome` e
+`papel`), `tipo` (`CRIADO`, `REMARCADO`, `CANCELADO`, `CONCLUIDO` ou `NAO_COMPARECEU`), `de` e `para` (só no `REMARCADO`)
+e `motivo` (só no `CANCELADO`). Mudança feita sem usuário, como a de um job, aparece com o autor "Sistema" e papel nulo;
+autor que já não está no cadastro aparece pelo nome do papel. Agendamento criado antes do histórico (migração `V10`) não
+tem o evento `CRIADO`.
 
 As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
 (`page`, `size`, `sort`). Nas listagens públicas de serviços e profissionais, quem não é administrador só vê itens

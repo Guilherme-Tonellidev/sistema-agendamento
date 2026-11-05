@@ -66,6 +66,7 @@ class SegurancaConfig {
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/profissionais/*/ativar", "/api/profissionais/*/inativar")
                         .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/agendamentos/*/historico").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(servidor -> servidor
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(token -> {
