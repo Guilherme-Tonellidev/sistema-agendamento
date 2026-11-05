@@ -109,6 +109,19 @@ class RegraDeTempoApiTest extends IntegracaoTest {
     }
 
     @Test
+    void adminReagendaParaOPassadoEAlemDaJanela() {
+        UUID agendamento = cenario.reservar(api, ana, carlos.id(), AS_9H);
+        relogio.ajustar(Instant.parse("2026-10-21T13:00:00Z"));
+
+        var noPassado = reagendar(api, agendamento, AS_8H);
+        var alemDaJanela = reagendar(api, agendamento, DAQUI_A_91_DIAS);
+
+        assertThat(noPassado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(alemDaJanela.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(buscar(agendamento).inicio()).isEqualTo(Instant.parse(DAQUI_A_91_DIAS));
+    }
+
+    @Test
     void adminContinuaSujeitoAJornadaAlinhamentoEChoque() {
         cenario.reservar(api, ana, carlos.id(), AS_8H);
 
