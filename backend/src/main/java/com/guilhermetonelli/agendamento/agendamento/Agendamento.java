@@ -14,6 +14,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
+import org.hibernate.envers.RelationTargetAuditMode;
+
 import com.guilhermetonelli.agendamento.agendamento.evento.Aviso;
 import com.guilhermetonelli.agendamento.cliente.Cliente;
 import com.guilhermetonelli.agendamento.disponibilidade.Periodo;
@@ -25,19 +29,27 @@ import com.guilhermetonelli.agendamento.shared.domain.EntidadeBase;
 import com.guilhermetonelli.agendamento.shared.domain.Textos;
 import com.guilhermetonelli.agendamento.shared.exception.RegraDeNegocioException;
 
-/** Reserva de um horário: um cliente, um profissional e um serviço, com o preço combinado. */
+/**
+ * Reserva de um horário: um cliente, um profissional e um serviço, com o preço combinado.
+ *
+ * <p>É a única entidade com histórico (Envers). Profissional, serviço e cliente entram na revisão só pelo id.
+ */
 @Entity
 @Table(name = "agendamento")
+@Audited
 public class Agendamento extends EntidadeBase {
 
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "profissional_id", nullable = false, updatable = false)
     private Profissional profissional;
 
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "servico_id", nullable = false, updatable = false)
     private Servico servico;
 
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "cliente_id", nullable = false, updatable = false)
     private Cliente cliente;
@@ -60,10 +72,15 @@ public class Agendamento extends EntidadeBase {
     @Column(length = 200)
     private String motivoCancelamento;
 
-    /** Quando o lembrete deve sair; nulo se não há lembrete a mandar. */
+    /**
+     * Quando o lembrete deve sair; nulo se não há lembrete a mandar. Fora do histórico: o Quartz mexe nele sem
+     * usuário, e o Envers só cria revisão quando um campo auditado muda.
+     */
+    @NotAudited
     private Instant lembrarEm;
 
-    /** Quando o broker confirmou o lembrete; só o job grava, direto no banco. */
+    /** Quando o broker confirmou o lembrete; só o job grava, direto no banco. Fora do histórico, como {@code lembrarEm}. */
+    @NotAudited
     private Instant lembreteEnviadoEm;
 
     protected Agendamento() {
