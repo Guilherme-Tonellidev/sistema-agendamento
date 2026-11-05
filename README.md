@@ -146,7 +146,7 @@ Endpoints, regras de reserva, avisos, configuração e deploy: [`docs/referencia
 - [x] **7. RabbitMQ:** eventos de agendamento, e-mails ao cliente e sino de notificações do barbeiro
 - [x] **8. Quartz:** lembretes por e-mail 24h antes do horário (1h antes para quem reserva em cima da hora)
 - [x] **9. Redis:** cache de horários e limite de tentativas de login
-- [ ] **10. Painel do administrador:** visão da semana com FullCalendar e histórico com Hibernate Envers
+- [x] **10. Painel do administrador:** visão da semana com FullCalendar e histórico com Hibernate Envers
 - [ ] **11. Deploy** com link público
 
 ## Autor
