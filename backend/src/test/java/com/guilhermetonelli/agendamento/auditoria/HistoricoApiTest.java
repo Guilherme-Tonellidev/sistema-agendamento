@@ -29,6 +29,7 @@ import com.guilhermetonelli.agendamento.IntegracaoTest;
 import com.guilhermetonelli.agendamento.agendamento.Agendamento;
 import com.guilhermetonelli.agendamento.auditoria.EventoDoHistorico.Autor;
 import com.guilhermetonelli.agendamento.seguranca.Papel;
+import com.guilhermetonelli.agendamento.seguranca.UsuarioLogado;
 import com.guilhermetonelli.agendamento.shared.domain.Antecedencia;
 import com.jayway.jsonpath.JsonPath;
 
@@ -71,6 +72,21 @@ class HistoricoApiTest extends IntegracaoTest {
         assertThat(eventos).extracting(EventoDoHistorico::quando).isSorted();
         // A conta do administrador do teste não existe no cadastro: o nome cai para o do papel.
         assertThat(eventos).extracting(EventoDoHistorico::autor).containsOnly(ADMINISTRADOR);
+    }
+
+    @Test
+    void administradorComContaApareceComOEmailDaConta() {
+        UUID conta = UUID.randomUUID();
+        jdbc.update("INSERT INTO usuario (id, email, papel, versao, criado_em, atualizado_em) VALUES (?, 'chefe@barbearia.com', 'ADMIN', 0, now(), now())",
+                conta);
+        var doChefe = apiComo(new UsuarioLogado(conta, Papel.ADMIN, null, null));
+
+        UUID id = cenario.reservar(doChefe, ana, carlos.id(), AS_8H);
+        cenario.cancelar(api, id, "Imprevisto");
+
+        // A conta existe: o e-mail dela é o nome. O admin do teste (api) não tem conta, então segue "Administrador".
+        assertThat(historico(api, id)).extracting(EventoDoHistorico::autor)
+                .containsExactly(new Autor("chefe@barbearia.com", Papel.ADMIN), ADMINISTRADOR);
     }
 
     @Test

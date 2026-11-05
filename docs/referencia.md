@@ -33,7 +33,7 @@ o administrador (`403` para os outros, `404` se o agendamento não existe). Cada
 `papel`), `tipo` (`CRIADO`, `REMARCADO`, `CANCELADO`, `CONCLUIDO` ou `NAO_COMPARECEU`), `de` e `para` (só no `REMARCADO`)
 e `motivo` (só no `CANCELADO`). Mudança feita sem usuário, como a de um job, aparece com o autor "Sistema" e papel nulo;
 autor que já não está no cadastro aparece pelo nome do papel. Agendamento criado antes do histórico (migração `V10`) não
-tem o evento `CRIADO`.
+tem o evento `CRIADO`, e a primeira mudança depois da `V10` serve só de ponto de partida.
 
 As listagens aceitam filtros (`nome`, `ativo`, `servicoId`, `status`, `de`, `ate`...) e paginação
 (`page`, `size`, `sort`). Nas listagens públicas de serviços e profissionais, quem não é administrador só vê itens
