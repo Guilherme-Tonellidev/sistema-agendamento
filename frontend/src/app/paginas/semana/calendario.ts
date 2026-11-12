@@ -49,6 +49,7 @@ export class Calendario {
   private readonly calendario = signal<Calendar | null>(null);
 
   constructor() {
+    const destruir = inject(DestroyRef);
     // O FullCalendar mexe direto no DOM: só no navegador, depois que o elemento existe.
     afterNextRender(() => {
       const { abre, fecha } = faixaDeHoras();
@@ -90,9 +91,23 @@ export class Calendario {
         },
       });
       calendario.render();
+
+      // O FullCalendar mede a grade ao renderizar e quando a janela muda; o painel lateral estreita o
+      // contêiner sem mudar a janela. Refazer no quadro seguinte evita o "ResizeObserver loop" do navegador.
+      let quadro = 0;
+      const observador = new ResizeObserver(() => {
+        cancelAnimationFrame(quadro);
+        quadro = requestAnimationFrame(() => calendario.updateSize());
+      });
+      observador.observe(this.grade().nativeElement);
+      destruir.onDestroy(() => {
+        cancelAnimationFrame(quadro);
+        observador.disconnect();
+      });
+
       this.calendario.set(calendario);
     });
-    inject(DestroyRef).onDestroy(() => this.calendario()?.destroy());
+    destruir.onDestroy(() => this.calendario()?.destroy());
 
     // Em cópia: o FullCalendar só aceita lista mutável.
     effect(() => this.calendario()?.setOption('events', [...this.eventos()]));
