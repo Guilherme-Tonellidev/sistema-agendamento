@@ -13,6 +13,7 @@ import com.guilhermetonelli.agendamento.cliente.Cliente;
 import com.guilhermetonelli.agendamento.disponibilidade.Periodo;
 import com.guilhermetonelli.agendamento.profissional.Profissional;
 import com.guilhermetonelli.agendamento.servico.Servico;
+import com.guilhermetonelli.agendamento.shared.domain.Antecedencia;
 import com.guilhermetonelli.agendamento.shared.exception.RegraDeNegocioException;
 
 class AgendamentoTest {
@@ -38,7 +39,7 @@ class AgendamentoTest {
     void cancelaComAntecedenciaERegistraMomentoEMotivo() {
         Instant agora = INICIO.minus(DUAS_HORAS);
 
-        agendamento.cancelar("  Imprevisto ", agora, DUAS_HORAS);
+        agendamento.cancelar("  Imprevisto ", agora, Antecedencia.de(DUAS_HORAS));
 
         assertThat(agendamento.getStatus()).isEqualTo(StatusAgendamento.CANCELADO);
         assertThat(agendamento.getCanceladoEm()).isEqualTo(agora);
@@ -47,16 +48,17 @@ class AgendamentoTest {
 
     @Test
     void recusaCancelamentoTardioOuDepoisDoInicio() {
-        assertThatThrownBy(() -> agendamento.cancelar(null, INICIO.minus(Duration.ofMinutes(90)), DUAS_HORAS))
+        assertThatThrownBy(() ->
+                agendamento.cancelar(null, INICIO.minus(Duration.ofMinutes(90)), Antecedencia.de(DUAS_HORAS)))
                 .isInstanceOf(RegraDeNegocioException.class)
                 .hasMessageContaining("2h de antecedência");
-        assertThatThrownBy(() -> agendamento.cancelar(null, INICIO, Duration.ZERO))
+        assertThatThrownBy(() -> agendamento.cancelar(null, INICIO, Antecedencia.NENHUMA))
                 .hasMessageContaining("já começou");
     }
 
     @Test
     void semAntecedenciaMinimaCancelaAteOInicio() {
-        agendamento.cancelar(null, INICIO.minusSeconds(1), Duration.ZERO);
+        agendamento.cancelar(null, INICIO.minusSeconds(1), Antecedencia.NENHUMA);
 
         assertThat(agendamento.getStatus()).isEqualTo(StatusAgendamento.CANCELADO);
     }
@@ -73,19 +75,44 @@ class AgendamentoTest {
 
     @Test
     void reagendaSoAntesDoInicio() {
-        assertThatThrownBy(() -> agendamento.reagendar(NOVO_HORARIO, INICIO, Duration.ZERO)).hasMessageContaining("já começou");
+        assertThatThrownBy(() -> agendamento.reagendar(NOVO_HORARIO, INICIO, Antecedencia.NENHUMA))
+                .hasMessageContaining("já começou");
 
-        agendamento.reagendar(NOVO_HORARIO, INICIO.minusSeconds(1), Duration.ZERO);
+        agendamento.reagendar(NOVO_HORARIO, INICIO.minusSeconds(1), Antecedencia.NENHUMA);
         assertThat(agendamento.horario()).isEqualTo(NOVO_HORARIO);
     }
 
     @Test
     void reagendamentoSegueOPrazoDoCancelamento() {
-        assertThatThrownBy(() -> agendamento.reagendar(NOVO_HORARIO, INICIO.minus(Duration.ofMinutes(90)), DUAS_HORAS))
+        assertThatThrownBy(() ->
+                agendamento.reagendar(NOVO_HORARIO, INICIO.minus(Duration.ofMinutes(90)), Antecedencia.de(DUAS_HORAS)))
                 .isInstanceOf(RegraDeNegocioException.class)
                 .hasMessageContaining("O reagendamento precisa ser feito com pelo menos 2h de antecedência");
 
-        agendamento.reagendar(NOVO_HORARIO, INICIO.minus(DUAS_HORAS), DUAS_HORAS);
+        agendamento.reagendar(NOVO_HORARIO, INICIO.minus(DUAS_HORAS), Antecedencia.de(DUAS_HORAS));
         assertThat(agendamento.horario()).isEqualTo(NOVO_HORARIO);
+    }
+
+    @Test
+    void adminLivreCancelaAtendimentoJaIniciado() {
+        agendamento.cancelar(null, INICIO.plusSeconds(1), Antecedencia.LIVRE);
+
+        assertThat(agendamento.getStatus()).isEqualTo(StatusAgendamento.CANCELADO);
+    }
+
+    @Test
+    void adminLivreReagendaAtendimentoJaIniciado() {
+        agendamento.reagendar(NOVO_HORARIO, INICIO.plusSeconds(1), Antecedencia.LIVRE);
+
+        assertThat(agendamento.getInicio()).isEqualTo(NOVO_HORARIO.inicio());
+    }
+
+    @Test
+    void livreAindaExigeConfirmado() {
+        agendamento.cancelar(null, INICIO.minus(DUAS_HORAS), Antecedencia.NENHUMA);
+
+        assertThatThrownBy(() -> agendamento.cancelar(null, INICIO.plusSeconds(1), Antecedencia.LIVRE))
+                .isInstanceOf(RegraDeNegocioException.class)
+                .hasMessageContaining("status");
     }
 }

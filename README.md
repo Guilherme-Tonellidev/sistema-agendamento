@@ -15,7 +15,7 @@ dados garante que nunca existam dois agendamentos sobrepostos para o mesmo profi
 ## O que faz
 
 - Calcula os horários livres de cada barbeiro a partir da jornada semanal, das folgas e das reservas ativas.
-- O cliente reserva (com 1h30 de antecedência), remarca e cancela (até 2 h antes). O barbeiro encaixa quem chega sem reserva, bloqueia horários e conclui atendimentos. O administrador cuida do catálogo e do acesso dos barbeiros.
+- O cliente reserva (com 1h30 de antecedência), remarca e cancela (até 2 h antes). O barbeiro encaixa quem chega sem reserva, bloqueia horários e conclui atendimentos. O administrador cuida do catálogo e do acesso dos barbeiros e, num calendário semanal, marca, remarca (inclusive arrastando o bloco), cancela, conclui e registra falta.
 - Avisa por e-mail (comprovante, remarcação, cancelamento e lembrete) e, para o barbeiro, pelo sino do cabeçalho.
 - Manda um lembrete 24 h antes do horário, ou 1 h antes para quem reservou com menos de 24 h.
 
@@ -146,7 +146,7 @@ Endpoints, regras de reserva, avisos, configuração e deploy: [`docs/referencia
 - [x] **7. RabbitMQ:** eventos de agendamento, e-mails ao cliente e sino de notificações do barbeiro
 - [x] **8. Quartz:** lembretes por e-mail 24h antes do horário (1h antes para quem reserva em cima da hora)
 - [x] **9. Redis:** cache de horários e limite de tentativas de login
-- [ ] **10. Painel do administrador:** visão da semana com FullCalendar e histórico com Hibernate Envers
+- [x] **10. Painel do administrador:** visão da semana com FullCalendar e histórico com Hibernate Envers
 - [ ] **11. Deploy** com link público
 
 ## Autor

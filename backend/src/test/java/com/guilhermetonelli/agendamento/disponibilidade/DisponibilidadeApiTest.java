@@ -3,6 +3,7 @@ package com.guilhermetonelli.agendamento.disponibilidade;
 import static java.time.DayOfWeek.MONDAY;
 import static java.time.DayOfWeek.WEDNESDAY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.INSTANT;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -21,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClient;
 
 import com.guilhermetonelli.agendamento.IntegracaoTest;
 import com.guilhermetonelli.agendamento.disponibilidade.dto.BloqueioRequest;
@@ -38,6 +40,7 @@ import com.jayway.jsonpath.JsonPath;
 class DisponibilidadeApiTest extends IntegracaoTest {
 
     private static final String QUARTA = "2026-10-21";
+    private static final String SEM_LIMITE = "&semLimite=true";
 
     @Test
     void defineJornadaEDevolveOrdenada() {
@@ -302,6 +305,50 @@ class DisponibilidadeApiTest extends IntegracaoTest {
     }
 
     @Test
+    void adminPedeHorariosSemLimiteEVeOsQueJaPassaram() {
+        var cenario = cenarioComJornada("08:00", "12:00");
+        // 10:00 em São Paulo: metade da jornada já ficou para trás.
+        relogio.ajustar(Instant.parse("2026-10-21T13:00:00Z"));
+
+        assertThat(iniciosParaEncaixe(cenario, QUARTA, "")).first(INSTANT).isAfterOrEqualTo(Instant.parse("2026-10-21T13:00:00Z"));
+        assertThat(iniciosParaEncaixe(cenario, QUARTA, SEM_LIMITE)).startsWith(Instant.parse("2026-10-21T11:00:00Z"));
+    }
+
+    @Test
+    void semLimiteVaiAoPassadoEAlemDaJanela() {
+        var cenario = cenarioComJornada("08:00", "12:00");
+        relogio.ajustar(Instant.parse("2026-10-21T13:00:00Z"));
+
+        assertThat(iniciosParaEncaixe(cenario, "2026-10-14", SEM_LIMITE)).isNotEmpty();
+        assertThat(iniciosParaEncaixe(cenario, "2027-01-20", SEM_LIMITE)).isNotEmpty();
+        // Sem o parâmetro, o encaixe continua preso ao futuro e à janela de reserva.
+        assertThat(iniciosParaEncaixe(cenario, "2026-10-14", "")).isEmpty();
+        assertThat(statusParaEncaixe(api, cenario, "2027-01-20", "")).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+    }
+
+    @Test
+    void semLimiteAindaRecusaAnosForaDaFaixa() {
+        var cenario = cenarioComJornada("08:00", "12:00");
+
+        assertThat(statusParaEncaixe(api, cenario, "-5000-01-01", SEM_LIMITE)).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(statusParaEncaixe(api, cenario, "+999999999-12-31", SEM_LIMITE)).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(statusParaEncaixe(api, cenario, "1900-01-01", SEM_LIMITE)).isEqualTo(HttpStatus.OK);
+        assertThat(statusParaEncaixe(api, cenario, "9999-12-31", SEM_LIMITE)).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void profissionalEClienteRecebem403ComSemLimite() {
+        var cenario = cenarioComJornada("08:00", "12:00");
+        var profissional = apiComo(comoProfissional(cenario.profissional()));
+        var cliente = apiComo(comoCliente(UUID.randomUUID()));
+
+        assertThat(statusParaEncaixe(profissional, cenario, QUARTA, "")).isEqualTo(HttpStatus.OK);
+        assertThat(statusParaEncaixe(profissional, cenario, QUARTA, "&semLimite=false")).isEqualTo(HttpStatus.OK);
+        assertThat(statusParaEncaixe(profissional, cenario, QUARTA, SEM_LIMITE)).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(statusParaEncaixe(cliente, cenario, QUARTA, SEM_LIMITE)).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
     void recusaProfissionalInativoServicoInativoOuNaoAtendido() {
         var cenario = cenarioComJornada("08:00", "09:00");
         UUID outroServico = cadastrarServico("Barba");
@@ -355,6 +402,26 @@ class DisponibilidadeApiTest extends IntegracaoTest {
                 .retrieve()
                 .toBodilessEntity()
                 .getStatusCode();
+    }
+
+    private List<Instant> iniciosParaEncaixe(Cenario cenario, String data, String opcoes) {
+        return encaixe(api, cenario, data, opcoes)
+                .body(new ParameterizedTypeReference<List<HorarioLivreResponse>>() {})
+                .stream()
+                .map(HorarioLivreResponse::inicio)
+                .toList();
+    }
+
+    private HttpStatusCode statusParaEncaixe(RestClient quem, Cenario cenario, String data, String opcoes) {
+        return encaixe(quem, cenario, data, opcoes).toBodilessEntity().getStatusCode();
+    }
+
+    /** {@code opcoes} é o resto da query, como {@code &semLimite=true}. */
+    private static RestClient.ResponseSpec encaixe(RestClient quem, Cenario cenario, String data, String opcoes) {
+        return quem.get()
+                .uri("/api/profissionais/{id}/horarios-livres/encaixe?servicoId={s}&data={d}" + opcoes,
+                        cenario.profissional(), cenario.servico(), data)
+                .retrieve();
     }
 
     private ResponseEntity<JornadaDto> definirJornada(UUID profissional, List<IntervaloDeJornadaDto> intervalos) {

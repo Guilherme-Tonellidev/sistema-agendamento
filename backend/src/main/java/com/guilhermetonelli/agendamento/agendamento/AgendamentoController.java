@@ -76,7 +76,7 @@ class AgendamentoController {
     }
 
     @PatchMapping("/{id}/cancelar")
-    @Operation(summary = "Cancela um agendamento que ainda não começou; o corpo com o motivo é opcional")
+    @Operation(summary = "Cancela um agendamento antes do início (o administrador, também depois); o corpo com o motivo é opcional")
     AgendamentoResponse cancelar(
             @PathVariable UUID id,
             @Valid @RequestBody(required = false) CancelamentoRequest request,

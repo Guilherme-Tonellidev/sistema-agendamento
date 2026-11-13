@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -98,13 +99,22 @@ class DisponibilidadeController {
     }
 
     @GetMapping("/horarios-livres/encaixe")
-    @Operation(summary = "Horários livres a partir de agora, para encaixar quem chegou sem reserva (profissional ou administrador)")
+    @Operation(
+            summary = "Horários livres a partir de agora, para encaixar quem chegou sem reserva (profissional ou administrador)",
+            description = "Com semLimite=true, só para o administrador, traz também o que já passou e os dias além da janela de reserva.")
     List<HorarioLivreResponse> horariosParaEncaixe(
             @PathVariable UUID id,
             @RequestParam UUID servicoId,
             @Parameter(description = "Dia no fuso do negócio", example = "2026-10-21") @RequestParam LocalDate data,
+            @Parameter(description = "Só o administrador: inclui o que já passou e os dias além da janela de reserva")
+                    @RequestParam(defaultValue = "false") boolean semLimite,
             @AuthenticationPrincipal UsuarioLogado eu) {
         eu.garantirAgendaDe(id);
-        return disponibilidadeService.horariosParaEncaixe(id, servicoId, data);
+        if (semLimite && !eu.admin()) {
+            throw new AccessDeniedException("Só o administrador consulta horários sem limite.");
+        }
+        return semLimite
+                ? disponibilidadeService.horariosSemLimite(id, servicoId, data)
+                : disponibilidadeService.horariosParaEncaixe(id, servicoId, data);
     }
 }

@@ -1,4 +1,4 @@
-import { abertaEm, atendeEm } from './barbearia';
+import { abertaEm, atendeEm, faixaDeHoras } from './barbearia';
 
 /** Instante no horário de São Paulo. */
 const as = (dataHora: string) => new Date(`${dataHora}:00-03:00`);
@@ -21,5 +21,12 @@ describe('atendeEm', () => {
 
   it('domingo não atende', () => {
     expect(atendeEm('2026-10-25', as('2026-10-22T10:00'))).toBe(false);
+  });
+});
+
+describe('faixaDeHoras', () => {
+  it('vai da abertura mais cedo ao fechamento mais tarde da semana', () => {
+    // O sábado abre às 8h e os dias úteis fecham às 20h.
+    expect(faixaDeHoras()).toEqual({ abre: 8, fecha: 20 });
   });
 });

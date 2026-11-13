@@ -1,6 +1,7 @@
 @let atendimento = agendamento();
 @let hora = horario();
 @let agoraEsta = estado();
+@let comecou = agoraEsta === 'andamento' || agoraEsta === 'pendente';
 <app-ingresso role="region" aria-label="Atendimento escolhido">
   <div topo>
     <p class="rotulo">{{ atendimento.cliente.nome }}</p>
@@ -27,7 +28,7 @@
     <p class="erro" role="alert">{{ mensagem }}</p>
   }
 
-  @if (agoraEsta === 'andamento' || agoraEsta === 'pendente') {
+  @if (comecou) {
     <div class="acoes">
       <button
         type="button"
@@ -46,7 +47,9 @@
         Cliente não compareceu
       </button>
     </div>
-  } @else if (agoraEsta === 'confirmado') {
+  }
+
+  @if (agoraEsta === 'confirmado' || (comecou && cancelaDepoisDoInicio())) {
     @if (confirmando()) {
       <p class="nota">
         Cancelar o horário das {{ hora.inicio }}? Ele volta a ficar livre na agenda.
@@ -76,7 +79,7 @@
         Sem telefone para avisar o cliente.
       }
     </p>
-  } @else {
+  } @else if (!comecou) {
     <p class="nota">Atendimento encerrado. Nada mais a fazer aqui.</p>
   }
 

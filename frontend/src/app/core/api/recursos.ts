@@ -1,5 +1,6 @@
 import { Resource, ResourceSnapshot, Signal, linkedSignal } from '@angular/core';
 
+import { mensagemDeErro } from './erros';
 import { Pagina } from './modelos';
 
 /**
@@ -23,6 +24,15 @@ export function ultimoValor<T>(recurso: Resource<T | undefined>, inicial: NoInfe
       }
     },
   }).asReadonly();
+}
+
+/**
+ * A mensagem de uma busca que falhou, ou null. O resource embrulha o que não é Error (como o
+ * HttpErrorResponse) no cause.
+ */
+export function falhaDe(busca: Resource<unknown>, padrao: string): string | null {
+  const erro = busca.error();
+  return erro ? mensagemDeErro(erro.cause ?? erro, padrao) : null;
 }
 
 /** Para o parse do httpResource: das listas paginadas do Spring, as telas só usam o conteúdo. */

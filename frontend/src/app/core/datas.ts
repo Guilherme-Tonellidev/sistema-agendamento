@@ -41,6 +41,12 @@ export function horaNoFuso(instante: Date | string): string {
   return formatoHora.format(new Date(instante));
 }
 
+/** Ex.: "21/10 08:00", no fuso da barbearia. */
+export function diaEHora(instante: Date | string): string {
+  const dia = dataNoFuso(instante);
+  return `${dia.slice(8, 10)}/${dia.slice(5, 7)} ${horaNoFuso(instante)}`;
+}
+
 /** Minutos desde a meia-noite, no fuso da barbearia. */
 export function minutosNoFuso(instante: Date | string): number {
   const [horas, minutos] = horaNoFuso(instante).split(':').map(Number);
@@ -53,6 +59,15 @@ export function instanteNoFuso(data: string, hora: string): Date {
   const comoUtc = new Date(`${data}T${hora}:00Z`);
   const mostrado = new Date(`${dataNoFuso(comoUtc)}T${horaNoFuso(comoUtc)}:00Z`);
   return new Date(2 * comoUtc.getTime() - mostrado.getTime());
+}
+
+/**
+ * Dia (AAAA-MM-DD) pelos campos locais do navegador. A grade em horário local mostra dias
+ * locais, então o dia da semana visível sai dos campos locais, não do fuso da barbearia.
+ */
+export function diaLocal(data: Date): string {
+  const doisDigitos = (numero: number) => String(numero).padStart(2, '0');
+  return `${data.getFullYear()}-${doisDigitos(data.getMonth() + 1)}-${doisDigitos(data.getDate())}`;
 }
 
 export function somarDias(data: string, dias: number): string {

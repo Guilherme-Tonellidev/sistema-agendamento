@@ -1,6 +1,9 @@
 package com.guilhermetonelli.agendamento.cliente;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -63,6 +66,11 @@ public class ClienteService {
 
     public Cliente obter(UUID id) {
         return repository.findById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Cliente", id));
+    }
+
+    /** Nomes de vários clientes numa consulta só; quem não existe fica de fora do mapa. */
+    public Map<UUID, String> nomesPorId(Collection<UUID> ids) {
+        return repository.findAllById(ids).stream().collect(Collectors.toMap(Cliente::getId, Cliente::getNome));
     }
 
     private static ConflitoException emailEmUso(String email) {

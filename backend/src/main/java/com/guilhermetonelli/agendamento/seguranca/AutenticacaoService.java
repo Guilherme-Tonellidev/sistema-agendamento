@@ -5,7 +5,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -137,6 +140,12 @@ public class AutenticacaoService {
         Usuario usuario = usuarios.findById(eu.id()).orElseThrow(() -> new RecursoNaoEncontradoException("Usuário", eu.id()));
         return new UsuarioResponse(
                 usuario.getId(), usuario.getEmail(), usuario.getPapel(), usuario.getProfissionalId(), usuario.getClienteId());
+    }
+
+    /** E-mails de várias contas numa consulta só; conta que não existe fica de fora do mapa. */
+    @Transactional(readOnly = true)
+    public Map<UUID, String> emailsPorId(Collection<UUID> ids) {
+        return usuarios.findAllById(ids).stream().collect(Collectors.toMap(Usuario::getId, Usuario::getEmail));
     }
 
     /** Cria ou troca a senha de acesso de um profissional; o login é o e-mail do cadastro dele. */

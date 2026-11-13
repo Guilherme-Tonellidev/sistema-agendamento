@@ -128,6 +128,29 @@ export interface NotificacoesResposta {
   readonly recentes: readonly Notificacao[];
 }
 
+/** Cliente do cadastro, como o administrador o encontra na busca por nome. */
+export interface ClienteCadastrado {
+  readonly id: string;
+  readonly nome: string;
+  readonly email: string | null;
+  readonly telefone: string | null;
+}
+
+export type TipoDeEvento = 'CRIADO' | 'REMARCADO' | 'CANCELADO' | 'CONCLUIDO' | 'NAO_COMPARECEU';
+
+/** Um passo da vida de um agendamento, derivado das revisões de auditoria do back-end. */
+export interface EventoDoHistorico {
+  readonly quando: string | null;
+  /** Sem papel quando foi o próprio sistema (nome "Sistema"). */
+  readonly autor: { readonly nome: string; readonly papel: Papel | null };
+  readonly tipo: TipoDeEvento;
+  /** Horários antigo e novo, só no REMARCADO. */
+  readonly de: string | null;
+  readonly para: string | null;
+  /** Só no CANCELADO, quando houve motivo. */
+  readonly motivo: string | null;
+}
+
 /** Problem Details (RFC 9457) devolvido pelo TratadorDeErros. */
 export interface Problema {
   readonly title?: string;

@@ -135,6 +135,7 @@ class AgendamentoApiTest extends IntegracaoTest {
     @Test
     void recusaHorariosQueNaoEstariamNaListaDeLivres() {
         bloquear(ana, AS_9H, "2026-10-21T13:00:00Z");
+        api = apiComo(comoCliente(carlos)); // o administrador reserva no passado e além da janela
 
         assertThat(reservar(ana, carlos, "2026-10-21T11:05:00Z")).satisfies(regraDeNegocio("a cada 15 minutos"));
         assertThat(reservar(ana, carlos, "2026-10-21T10:30:00Z")).satisfies(regraDeNegocio("fora da jornada"));
@@ -151,6 +152,7 @@ class AgendamentoApiTest extends IntegracaoTest {
 
     @Test
     void exigeAntecedenciaMinimaParaReservar() {
+        api = apiComo(comoCliente(carlos));
         relogio.ajustar(Instant.parse("2026-10-21T09:45:00Z"));
 
         assertThat(reservar(ana, carlos, AS_8H)).satisfies(regraDeNegocio("pelo menos 1h30 de antecedência"));
@@ -518,6 +520,7 @@ class AgendamentoApiTest extends IntegracaoTest {
         assertThat(reagendar(cancelado, AS_8H30)).satisfies(regraDeNegocio("status CANCELADO"));
 
         relogio.ajustar(Instant.parse(AS_9H));
+        api = apiComo(comoProfissional(ana)); // o administrador reagenda até o que já começou
         assertThat(reagendar(iniciado, "2026-10-21T13:00:00Z")).satisfies(regraDeNegocio("já começou"));
     }
 

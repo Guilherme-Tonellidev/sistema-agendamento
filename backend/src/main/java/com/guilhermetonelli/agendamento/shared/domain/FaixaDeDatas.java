@@ -27,7 +27,8 @@ public record FaixaDeDatas(Instant inicio, Instant fim) {
                 ate == null ? null : ate.plusDays(1).atStartOfDay(fuso).toInstant());
     }
 
-    private static void garantirNaFaixa(LocalDate data) {
+    /** Recusa datas fora da faixa de anos aceita; {@code null} passa. */
+    public static void garantirNaFaixa(LocalDate data) {
         if (data != null && (data.getYear() < ANO_MINIMO || data.getYear() > ANO_MAXIMO)) {
             throw new RegraDeNegocioException(
                     "As datas devem estar entre os anos %d e %d.".formatted(ANO_MINIMO, ANO_MAXIMO));

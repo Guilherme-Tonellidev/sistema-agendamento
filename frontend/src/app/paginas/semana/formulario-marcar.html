@@ -1,0 +1,202 @@
+@let quando = titulo();
+<app-ingresso role="region" aria-label="Marcar horário">
+  <div topo>
+    <p class="rotulo">{{ quando.dia }}</p>
+    <p class="hora-grande">{{ quando.hora }}</p>
+    <p class="suave">
+      @if (servico(); as escolhido) {
+        {{ escolhido.nome }}
+      } @else {
+        Escolha o barbeiro e o serviço
+      }
+    </p>
+  </div>
+
+  <form [formRoot]="cliente">
+    <div class="campo">
+      <span class="titulo-campo" id="barbeiro-marcar">Barbeiro</span>
+      <div class="opcoes" role="radiogroup" aria-labelledby="barbeiro-marcar">
+        @for (barbeiro of barbeiros(); track barbeiro.id) {
+          <button
+            type="button"
+            role="radio"
+            class="opcao"
+            [attr.aria-checked]="barbeiro.id === profissionalId()"
+            (click)="profissionalId.set(barbeiro.id)"
+          >
+            {{ barbeiro.nome }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (profissionalId()) {
+      <div class="campo">
+        <span class="titulo-campo" id="servico-marcar">Serviço</span>
+        <div class="opcoes" role="radiogroup" aria-labelledby="servico-marcar">
+          @for (opcao of servicos(); track opcao.id) {
+            <button
+              type="button"
+              role="radio"
+              class="opcao"
+              [attr.aria-checked]="opcao.id === servicoId()"
+              (click)="servicoId.set(opcao.id)"
+            >
+              {{ opcao.nome }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    @if (falhaNaEquipe(); as mensagem) {
+      <p class="erro" role="alert">{{ mensagem }}</p>
+    }
+
+    <div class="campo">
+      <span class="titulo-campo" id="horario-marcar">Horários livres</span>
+      @if (opcoes().length) {
+        <div
+          class="opcoes grade"
+          role="radiogroup"
+          aria-labelledby="horario-marcar"
+          [attr.aria-busy]="buscando()"
+        >
+          @for (opcao of opcoes(); track opcao.horario.inicio) {
+            <button
+              type="button"
+              role="radio"
+              class="opcao"
+              [attr.aria-checked]="opcao.horario === escolhido()"
+              (click)="escolhido.set(opcao.horario)"
+            >
+              {{ opcao.hora }}
+            </button>
+          }
+        </div>
+        <p class="nota">Para outro horário, clique na grade.</p>
+      } @else if (falhaNosHorarios(); as mensagem) {
+        <p class="erro" role="alert">{{ mensagem }}</p>
+      } @else {
+        <p class="nota">
+          @if (!servico()) {
+            Escolha o serviço para ver os horários.
+          } @else if (buscando()) {
+            Buscando horários…
+          } @else {
+            Nenhum horário livre nesse dia para esse serviço.
+          }
+        </p>
+      }
+    </div>
+
+    <div class="campo">
+      <span class="titulo-campo" id="cliente-marcar">Cliente</span>
+      <div class="opcoes" role="radiogroup" aria-labelledby="cliente-marcar">
+        <button
+          type="button"
+          role="radio"
+          class="opcao"
+          [attr.aria-checked]="aba() === 'cadastrado'"
+          (click)="aba.set('cadastrado')"
+        >
+          Já cadastrado
+        </button>
+        <button
+          type="button"
+          role="radio"
+          class="opcao"
+          [attr.aria-checked]="aba() === 'novo'"
+          (click)="aba.set('novo')"
+        >
+          Cliente novo
+        </button>
+      </div>
+    </div>
+
+    @if (aba() === 'cadastrado') {
+      <div class="campo">
+        <label for="busca-marcar">Buscar pelo nome</label>
+        <input
+          #campoBusca
+          id="busca-marcar"
+          type="search"
+          autocomplete="off"
+          placeholder="Digite ao menos 2 letras"
+          [value]="busca()"
+          (input)="digitou(campoBusca.value)"
+          (keydown.enter)="buscarJa($event)"
+        />
+      </div>
+      @if (clientes().length) {
+        <div
+          class="opcoes"
+          role="radiogroup"
+          aria-label="Clientes encontrados"
+          [attr.aria-busy]="procurando()"
+        >
+          @for (encontrado of clientes(); track encontrado.id) {
+            <button
+              type="button"
+              role="radio"
+              class="opcao"
+              [attr.aria-checked]="encontrado.id === clienteEscolhido()?.id"
+              (click)="clienteEscolhido.set(encontrado)"
+            >
+              {{ encontrado.nome }}
+              <span class="opcional">
+                @if (encontrado.email) {
+                  {{ encontrado.email }}
+                } @else if (encontrado.telefone) {
+                  {{ encontrado.telefone | telefone }}
+                }
+              </span>
+            </button>
+          }
+        </div>
+      } @else if (nenhumCliente()) {
+        <p class="nota">Nenhum cliente com esse nome.</p>
+      }
+    } @else {
+      <div class="campo">
+        @let nome = cliente.nomeDoCliente();
+        <label for="nome-marcar">Nome do cliente</label>
+        <input
+          id="nome-marcar"
+          autocomplete="off"
+          [formField]="cliente.nomeDoCliente"
+          [attr.aria-invalid]="nome.touched() && nome.invalid()"
+          aria-describedby="nome-marcar-erro"
+        />
+        @if (nome.touched() && nome.errors()[0]; as erro) {
+          <p class="erro-campo" id="nome-marcar-erro">{{ erro.message }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        @let telefone = cliente.telefone();
+        <label for="telefone-marcar">Celular <span class="opcional">(opcional)</span></label>
+        <input
+          id="telefone-marcar"
+          type="tel"
+          autocomplete="off"
+          [formField]="cliente.telefone"
+          [attr.aria-invalid]="telefone.touched() && telefone.invalid()"
+          aria-describedby="telefone-marcar-erro"
+        />
+        @if (telefone.touched() && telefone.errors()[0]; as erro) {
+          <p class="erro-campo" id="telefone-marcar-erro">{{ erro.message }}</p>
+        }
+      </div>
+    }
+
+    @if (cliente().errors()[0]; as erro) {
+      <p class="erro" role="alert">{{ erro.message }}</p>
+    }
+
+    <button type="submit" class="botao primario" [disabled]="cliente().submitting() || !pronto()">
+      {{ cliente().submitting() ? 'Marcando…' : 'Marcar às ' + quando.hora }}
+    </button>
+    <button type="button" class="botao secundario" (click)="voltar.emit()">Cancelar</button>
+  </form>
+</app-ingresso>

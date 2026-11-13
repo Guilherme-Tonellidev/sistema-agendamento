@@ -38,5 +38,11 @@ export const routes: Routes = [
     canActivate: [exigePapel('PROFISSIONAL', 'ADMIN')],
     loadComponent: () => import('./paginas/agenda/agenda').then((m) => m.Agenda),
   },
+  {
+    path: 'semana',
+    title: 'Semana — Barbearia Tonelli',
+    canActivate: [exigePapel('ADMIN')],
+    loadComponent: () => import('./paginas/semana/semana').then((m) => m.Semana),
+  },
   { path: '**', redirectTo: '' },
 ];
